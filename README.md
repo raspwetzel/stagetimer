@@ -578,7 +578,11 @@ updated_at DATETIME
 
 Die vollständige Versionshistorie mit allen Änderungen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-**Aktuelle Version:** 2.1.0
+**Aktuelle Version:** 2.1.1
+
+### Highlights v2.1.1 (2026-02-03)
+- Kritischer Bug in start_timer() behoben (NameError)
+- Timer-Start und Historie funktionieren jetzt zuverlaessig
 
 ### Highlights v2.1.0 (2026-02-03)
 - Rollenbasiertes Berechtigungssystem (5 Rollen)
@@ -613,5 +617,5 @@ Bei Fragen oder Problemen erstelle bitte ein Issue im GitHub-Repository.
 
 **Entwickler:** Andre Wetzel
 **Projekt:** StageTimer - Webbasiertes Countdown-System fuer Live-Events
-**Version:** 2.1.0
+**Version:** 2.1.1
 **Technologie:** Flask, Socket.IO, SQLite, Docker

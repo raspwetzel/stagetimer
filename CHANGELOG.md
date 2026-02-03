@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.1.1] - 2026-02-03
+
+### Behoben
+- **Kritischer Bug in start_timer()**: NameError behoben - `warn_orange` und `warn_red` wurden als nicht existierende Variablen verwendet statt der Funktionen `get_warn_orange()` und `get_warn_red()`
+- Timer-Start funktioniert jetzt zuverlaessig ueber Admin-Panel
+- Historie wird korrekt gefuellt nach Ablauf einer Band
+
 ## [2.1.0] - 2026-02-03
 
 ### Hinzugefuegt

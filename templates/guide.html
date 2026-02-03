@@ -527,6 +527,65 @@
         <summary>📋 Versionshistorie</summary>
         <div class="changelog-content">
 
+          <h3>Version 2.1.1 - 2026-02-03</h3>
+
+          <h4>Behoben</h4>
+          <ul>
+            <li><strong>Kritischer Bug in start_timer()</strong>: NameError behoben - <code>warn_orange</code> und <code>warn_red</code> wurden als nicht existierende Variablen verwendet statt der Funktionen <code>get_warn_orange()</code> und <code>get_warn_red()</code></li>
+            <li>Timer-Start funktioniert jetzt zuverlässig über Admin-Panel</li>
+            <li>Historie wird korrekt gefüllt nach Ablauf einer Band</li>
+          </ul>
+
+          <hr>
+
+          <h3>Version 2.1.0 - 2026-02-03</h3>
+
+          <h4>Hinzugefügt</h4>
+          <ul>
+            <li><strong>Rollenbasiertes Berechtigungssystem</strong> mit 5 Rollen:
+              <ul>
+                <li><code>ViewerStage</code> - Nur Bühnenanzeige</li>
+                <li><code>ViewerBackstage</code> - Nur Backstage-Anzeige</li>
+                <li><code>ViewerTimetable</code> - Nur Zeitplan-Anzeige</li>
+                <li><code>Stagemanager</code> - Eingeschränkter Admin-Zugriff mit allen Viewer-Rechten</li>
+                <li><code>Admin</code> - Vollzugriff auf alle Funktionen</li>
+              </ul>
+            </li>
+            <li><strong>Veranstaltungspasswort</strong> für anonymen Zugang zur Bühnenanzeige
+              <ul>
+                <li>Einstellbar im Admin-Panel</li>
+                <li>Separater Login-Tab auf der Login-Seite</li>
+                <li>Gibt nur ViewerStage-Berechtigung</li>
+              </ul>
+            </li>
+            <li><strong>Rollen-Verwaltung</strong> im Admin-Panel
+              <ul>
+                <li>Klick auf Benutzername öffnet Rollen-Modal</li>
+                <li>Checkboxen für Rollenzuweisung</li>
+                <li>Validierung: Viewer-Rollen kombinierbar, Stagemanager/Admin exklusiv</li>
+              </ul>
+            </li>
+            <li><strong>Geschützte Viewer-Seiten</strong> - Alle Seiten erfordern jetzt Login</li>
+            <li><strong>Logout-Button</strong> in der Navigation aller Views</li>
+          </ul>
+
+          <h4>Geändert</h4>
+          <ul>
+            <li>Login-Seite mit Tabs für Benutzer-Login und Veranstaltungspasswort</li>
+            <li>Admin-Panel zeigt Sektionen basierend auf Rolle</li>
+            <li>Hardcodierte Admin-Checks durch Rollensystem ersetzt</li>
+            <li>Navigation zeigt nur zugängliche Seiten basierend auf Benutzerrolle</li>
+          </ul>
+
+          <h4>Behoben</h4>
+          <ul>
+            <li>Benutzer können sich nicht mehr selbst löschen</li>
+            <li>Letzter Admin-Benutzer kann nicht degradiert werden</li>
+            <li>Eigene Admin-Rolle kann nicht entfernt werden</li>
+          </ul>
+
+          <hr>
+
           <h3>Version 2.0.1 - 2026-02-03</h3>
 
           <h4>Hinzugefügt</h4>

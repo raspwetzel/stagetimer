@@ -589,8 +589,8 @@ def start_timer():
         'band': band['band'],
         'remaining': remaining,
         'total_duration': band['duration'] * 60,
-        'warn_orange': warn_orange,
-        'warn_red': warn_red
+        'warn_orange': get_warn_orange(),
+        'warn_red': get_warn_red()
     }
 
     if next_band_info:
@@ -1089,8 +1089,8 @@ def admin():
                     'band': schedule[current_band_index]['band'],
                     'remaining': remaining,
                     'total_duration': schedule[current_band_index]['duration'] * 60,
-                    'warn_orange': warn_orange,
-                    'warn_red': warn_red
+                    'warn_orange': get_warn_orange(),
+                    'warn_red': get_warn_red()
                 }
 
                 if next_band_info:
