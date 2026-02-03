@@ -2,6 +2,11 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.2.1] - 2026-02-03
+
+### Hinzugefuegt
+- **Nachrichten-Vorschau im Admin-Panel**: Gesendete Nachrichten an Bands werden jetzt auch in der Display-Vorschau angezeigt
+
 ## [2.2.0] - 2026-02-03
 
 ### Hinzugefuegt

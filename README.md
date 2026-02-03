@@ -578,7 +578,10 @@ updated_at DATETIME
 
 Die vollständige Versionshistorie mit allen Änderungen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-**Aktuelle Version:** 2.2.0
+**Aktuelle Version:** 2.2.1
+
+### Highlights v2.2.1 (2026-02-03)
+- Nachrichten an Bands werden jetzt auch in der Admin-Vorschau angezeigt
 
 ### Highlights v2.2.0 (2026-02-03)
 - Benutzer koennen ihr eigenes Passwort aendern
@@ -622,5 +625,5 @@ Bei Fragen oder Problemen erstelle bitte ein Issue im GitHub-Repository.
 
 **Entwickler:** Andre Wetzel
 **Projekt:** StageTimer - Webbasiertes Countdown-System fuer Live-Events
-**Version:** 2.2.0
+**Version:** 2.2.1
 **Technologie:** Flask, Socket.IO, SQLite, Docker

@@ -179,6 +179,27 @@
       console.log('Nachricht gesendet:', data);
     });
 
+    // Zeige Nachricht auch in der Vorschau
+    let previewMessageTimeout = null;
+    socket.on('display_message', (data) => {
+      console.log('Zeige Nachricht in Vorschau:', data);
+      const messageElement = document.getElementById('previewMessage');
+
+      // Loesche vorheriges Timeout
+      if (previewMessageTimeout) {
+        clearTimeout(previewMessageTimeout);
+      }
+
+      // Setze und zeige Nachricht
+      messageElement.textContent = data.message;
+      messageElement.classList.add('show');
+
+      // Verstecke nach X Sekunden
+      previewMessageTimeout = setTimeout(() => {
+        messageElement.classList.remove('show');
+      }, data.duration * 1000);
+    });
+
     // Initialer Status-Check mit Cache-Busting
     document.addEventListener('DOMContentLoaded', () => {
       fetch('/status?' + new Date().getTime())  // Cache-Busting
@@ -421,6 +442,30 @@
 
     .preview-warning-red .progress-bar-preview {
       background: var(--danger);
+    }
+
+    .preview-message {
+      display: none;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid white;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      text-align: center;
+      color: white;
+      animation: fadeInMessage 0.3s ease-out;
+    }
+
+    .preview-message.show {
+      display: block;
+    }
+
+    @keyframes fadeInMessage {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .schedule-container {
@@ -799,6 +844,7 @@
           <div class="progress-container-preview">
             <div class="progress-bar-preview" id="previewProgress"></div>
           </div>
+          <div class="preview-message" id="previewMessage"></div>
         </div>
       </div>
 
