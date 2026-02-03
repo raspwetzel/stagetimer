@@ -13,7 +13,6 @@ services:
     volumes:
       # Persistente Daten
       - ./stagetimer.db:/app/stagetimer.db          # SQLite-Datenbank
-      - ./.secret_key:/app/.secret_key              # Session-Key (auto-generiert)
       - ./static/uploads:/app/static/uploads        # Uploads (Logos)
     environment:
       - TZ=Europe/Berlin
