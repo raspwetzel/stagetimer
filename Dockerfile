@@ -20,15 +20,8 @@ COPY database.py .
 COPY static/ static/
 COPY templates/ templates/
 
-# Erstelle Upload- und Backup-Verzeichnisse und setze Berechtigungen
-RUN mkdir -p static/uploads backups && \
-    chmod 755 static/uploads backups
-
-# Erstelle Benutzer für Anwendung (Security Best Practice)
-RUN useradd -m -u 1000 stagetimer && \
-    chown -R stagetimer:stagetimer /app
-
-USER stagetimer
+# Erstelle Upload-Verzeichnisse
+RUN mkdir -p static/uploads/band_logos
 
 # Setze Umgebungsvariablen
 ENV FLASK_APP=app.py
@@ -40,7 +33,7 @@ EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/status')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/status')" || exit 1
 
 # Starte die Anwendung
-CMD ["python", "app.py"] 
+CMD ["python", "app.py"]
