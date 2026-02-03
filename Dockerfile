@@ -15,8 +15,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Kopiere Anwendungscode
 COPY app.py .
 COPY database.py .
-COPY migrate_to_db.py .
-COPY hash.py .
 
 # Kopiere statische Dateien und Templates
 COPY static/ static/
