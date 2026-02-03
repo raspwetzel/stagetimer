@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Stagetimer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/fav/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/fav/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/fav/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/fav/site.webmanifest">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .login-box {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-container img {
+            max-width: 250px;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin: 0 0 2rem 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            background: #2d3748;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .stage-link {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            margin-top: 1rem;
+            background: transparent;
+            color: #64748b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .stage-link:hover {
+            background: rgba(100, 116, 139, 0.1);
+            border-color: #64748b;
+            color: #94a3b8;
+        }
+
+        .stage-link-container {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .error {
+            background: rgba(220, 38, 38, 0.1);
+            color: #ef4444;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            text-align: center;
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .copyright {
+            margin-top: 2rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            padding-top: 1rem;
+            border-top: 1px solid #374151;
+        }
+
+        .copyright a {
+            color: #3b82f6;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .copyright a:hover {
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo-container">
+            {% if logo %}
+                <img src="{{ url_for('static', filename='uploads/' + logo) }}" alt="Logo">
+            {% endif %}
+            <h1>Stagetimer Login</h1>
+        </div>
+        {% if error %}
+            <div class="error">
+                Benutzername oder Passwort falsch
+            </div>
+        {% endif %}
+        <form method="POST">
+            <input type="text" name="username" placeholder="Benutzername" required>
+            <input type="password" name="password" placeholder="Passwort" required>
+            <button type="submit">Einloggen</button>
+        </form>
+        <div class="stage-link-container">
+            <a href="/stage" class="stage-link">Back to Stage</a>
+        </div>
+        <div class="copyright">
+            &copy; <span id="year"></span> André Wetzel - <a href="https://awetzel-it.de" target="_blank">awetzel-it.de</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

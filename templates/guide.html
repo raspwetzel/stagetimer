@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Anleitung - StageTimer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/img/fav/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/fav/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/img/fav/favicon-16x16.png">
+  <link rel="manifest" href="/static/img/fav/site.webmanifest">
+  <style>
+    .guide-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .guide-section {
+      background: var(--card-bg);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .guide-section h2 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .guide-section h3 {
+      color: var(--text);
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 1.2rem;
+    }
+
+    .guide-section p, .guide-section li {
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .guide-section ul, .guide-section ol {
+      margin-left: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .guide-section li {
+      margin-bottom: 0.5rem;
+    }
+
+    .tip-box {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 4px solid var(--primary);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0.25rem;
+    }
+
+    .warning-box {
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 4px solid var(--danger);
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 0.25rem;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      border: 2px solid var(--primary);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .feature-card h4 {
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    code {
+      background: rgba(59, 130, 246, 0.1);
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      font-family: 'Courier New', monospace;
+      color: var(--primary);
+      font-size: 0.9em;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--card-bg);
+      color: var(--primary);
+      text-decoration: none;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .back-link:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateX(-4px);
+    }
+
+    .copyright {
+      text-align: center;
+      padding: 2rem 0;
+      margin-top: 3rem;
+      border-top: 2px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .copyright a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .copyright a:hover {
+      text-decoration: underline;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .changelog-section {
+      margin-bottom: 3rem;
+    }
+
+    details.changelog {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0;
+      margin-bottom: 2rem;
+    }
+
+    details.changelog summary {
+      padding: 1.5rem;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      list-style: none;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    details.changelog summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.changelog summary::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s;
+    }
+
+    details.changelog[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    details.changelog summary:hover {
+      background: var(--surface-hover);
+    }
+
+    details.changelog .changelog-content {
+      padding: 0 1.5rem 1.5rem 1.5rem;
+      color: var(--text-muted);
+    }
+
+    details.changelog h3 {
+      color: var(--primary);
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 1.3rem;
+    }
+
+    details.changelog h3:first-child {
+      margin-top: 0;
+    }
+
+    details.changelog h4 {
+      color: var(--text);
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    details.changelog ul {
+      margin-left: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    details.changelog li {
+      margin-bottom: 0.5rem;
+      line-height: 1.6;
+    }
+
+    details.changelog hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+
+    details.changelog .dev-info {
+      background: rgba(59, 130, 246, 0.1);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-top: 2rem;
+    }
+
+    details.changelog .dev-info p {
+      margin: 0.25rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="guide-container">
+    <a href="/admin" class="back-link">← Zurück zum Admin-Panel</a>
+
+    <header>
+      <h1>StageTimer Anleitung</h1>
+      <p>Vollständige Dokumentation für die Verwaltung des Stage-Timers</p>
+    </header>
+
+    <!-- Übersicht -->
+    <div class="guide-section">
+      <h2>Übersicht</h2>
+      <p>
+        StageTimer ist ein webbasiertes Countdown-System für Live-Events. Es zeigt auf einer großen Bühnen-Anzeige
+        die verbleibende Zeit der aktuell spielenden Band und Informationen über kommende Auftritte.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>Timer-Verwaltung</h4>
+          <p>Automatischer Countdown mit Echtzeit-Updates und Warnzeiten</p>
+        </div>
+        <div class="feature-card">
+          <h4>Zeitplan-Editor</h4>
+          <p>Einfache Verwaltung von Bands mit Start- und Endzeiten</p>
+        </div>
+        <div class="feature-card">
+          <h4>Band-Logos</h4>
+          <p>Anzeige von Band-Logos auf der Bühnen-Anzeige</p>
+        </div>
+        <div class="feature-card">
+          <h4>Historie</h4>
+          <p>Automatische Aufzeichnung aller gespielten Sets</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grundlegende Bedienung -->
+    <div class="guide-section">
+      <h2>Grundlegende Bedienung</h2>
+
+      <h3>1. Zeitplan erstellen</h3>
+      <ol>
+        <li>Im Abschnitt "Neuen Slot anlegen" Datum, Bandname, Start- und Endzeit eingeben</li>
+        <li>Auf "Hinzufügen" klicken</li>
+        <li>Die Band erscheint automatisch im Zeitplan</li>
+        <li>Bei Bedarf über die Tabelle anpassen oder löschen</li>
+      </ol>
+
+      <div class="tip-box">
+        <strong>Tipp:</strong> Das System berechnet automatisch die Dauer und erkennt Bands, die über Mitternacht spielen.
+      </div>
+
+      <h3>2. CSV-Import nutzen</h3>
+      <ol>
+        <li>Beispiel-CSV herunterladen</li>
+        <li>In Excel/LibreOffice öffnen und anpassen</li>
+        <li>Als CSV speichern</li>
+        <li>Im Abschnitt "CSV Verwaltung" hochladen</li>
+      </ol>
+
+      <div class="warning-box">
+        <strong>Wichtig:</strong> Das System prüft auf Zeitkonflikte! Wenn Bands sich überschneiden, wird der Upload abgelehnt.
+      </div>
+
+      <h3>3. Band-Logos hochladen</h3>
+      <ol>
+        <li>Im Zeitplan auf das Upload-Icon neben der Band klicken</li>
+        <li>Bild auswählen (PNG, JPG, GIF, SVG, WEBP)</li>
+        <li>Das Logo erscheint auf der Bühnen-Anzeige wenn die Band spielt</li>
+      </ol>
+
+      <div class="tip-box">
+        <strong>Smart Rename:</strong> Wenn du einen Bandnamen änderst (gleiche Zeit und Datum), wird das Logo automatisch übertragen!
+      </div>
+    </div>
+
+    <!-- Timer-Steuerung -->
+    <div class="guide-section">
+      <h2>Timer-Steuerung</h2>
+
+      <h3>Display-Vorschau</h3>
+      <p>Zeigt an, was aktuell auf der Bühnen-Anzeige zu sehen ist:</p>
+      <ul>
+        <li><strong>Grün (Playing):</strong> Band spielt gerade, zeigt Countdown</li>
+        <li><strong>Orange (Waiting):</strong> Nächste Band wird bald starten</li>
+        <li><strong>Grau (Idle):</strong> Kein Event aktiv</li>
+      </ul>
+
+      <h3>Zeit anpassen</h3>
+      <p>Während eine Band spielt, kannst du die Zeit verlängern oder verkürzen:</p>
+      <ul>
+        <li><strong>+1 / +5 / +10 Min:</strong> Zeit verlängern</li>
+        <li><strong>-1 / -5 / -10 Min:</strong> Zeit verkürzen (z.B. wenn Band früher fertig ist)</li>
+      </ul>
+
+      <div class="tip-box">
+        <strong>Tipp:</strong> Das System prüft automatisch, ob eine Verlängerung die nächste Band überlappt und warnt dich!
+      </div>
+
+      <h3>Nachricht an Band</h3>
+      <p>Sende kurze Zeitanzeigen (10/15/30 Sek) als Warnung, z.B. "Noch 30 Sekunden!"</p>
+    </div>
+
+    <!-- Erweiterte Features -->
+    <div class="guide-section">
+      <h2>Erweiterte Features</h2>
+
+      <h3>Historie</h3>
+      <p>Alle gespielten Bands werden automatisch in der Historie gespeichert. Du siehst:</p>
+      <ul>
+        <li><strong>Geplante Zeiten:</strong> Die ursprünglich geplanten Start- und Endzeiten</li>
+        <li><strong>Tatsächliche Zeiten:</strong> Wann die Band wirklich gespielt hat</li>
+        <li><strong>Spieldauer:</strong> Die tatsächliche Dauer des Sets</li>
+      </ul>
+      <p>
+        Einzelne Einträge können entfernt werden, oder die gesamte Historie geleert werden.
+        Die Daten bleiben in der Datenbank, sind nur ausgeblendet.
+      </p>
+
+      <h3>Warnzeit-Einstellungen</h3>
+      <p>Konfiguriere wann die Countdown-Farben wechseln:</p>
+      <ul>
+        <li><strong>Orange Warnung:</strong> Standardmäßig bei 5 Minuten verbleibender Zeit</li>
+        <li><strong>Rote Warnung:</strong> Standardmäßig bei 1 Minute verbleibender Zeit</li>
+      </ul>
+
+      <h3>Logo-Einstellungen</h3>
+      <ul>
+        <li><strong>Stage-Logo:</strong> Wird oben auf allen Anzeigen gezeigt</li>
+        <li><strong>Größe:</strong> Anpassbar zwischen 5% und 30% der Bildschirmhöhe</li>
+      </ul>
+    </div>
+
+    <!-- Die verschiedenen Anzeigen -->
+    <div class="guide-section">
+      <h2>Die verschiedenen Anzeigen</h2>
+
+      <h3>1. Stage View (Hauptanzeige)</h3>
+      <p><strong>Route:</strong> <code>/</code> (Startseite)</p>
+      <p>Dies ist die Hauptanzeige für die Bühne. Zeigt:</p>
+      <ul>
+        <li>Stage-Logo oben</li>
+        <li>Aktuelle Band mit Logo (falls vorhanden)</li>
+        <li>Großer Countdown im Format MM:SS</li>
+        <li>Nächste Band mit orange Balken und Countdown bis Start</li>
+      </ul>
+
+      <h3>2. Backstage View</h3>
+      <p><strong>Route:</strong> <code>/backstage</code></p>
+      <p>Kompakte Ansicht für Backstage-Monitore mit gleichen Informationen wie Stage View.</p>
+
+      <h3>3. Timetable (Zeitplan-Anzeige)</h3>
+      <p><strong>Route:</strong> <code>/timetable</code></p>
+      <p>Übersicht über alle Bands des Tages zur Information für Besucher.</p>
+
+      <h3>4. Admin Panel</h3>
+      <p><strong>Route:</strong> <code>/admin</code></p>
+      <p>Verwaltungsoberfläche mit Display-Vorschau, Zeitplan-Editor, Zeit-Anpassung, Historie und Einstellungen.</p>
+    </div>
+
+    <!-- Tipps & Best Practices -->
+    <div class="guide-section">
+      <h2>Tipps & Best Practices</h2>
+
+      <h3>Vor dem Event</h3>
+      <ul>
+        <li>Zeitplan vollständig anlegen und auf Konflikte prüfen</li>
+        <li>Band-Logos im Voraus hochladen</li>
+        <li>Warnzeiten nach Bedarf anpassen</li>
+        <li>Alle Anzeigen auf verschiedenen Geräten testen</li>
+      </ul>
+
+      <h3>Während des Events</h3>
+      <ul>
+        <li>Display-Vorschau im Admin-Panel im Auge behalten</li>
+        <li>Bei verspäteten Bands: Einfach -10 Min mehrmals drücken</li>
+        <li>Bei technischen Problemen: Seite neu laden hilft oft</li>
+        <li>Bands werden automatisch aus dem Zeitplan entfernt wenn sie fertig sind</li>
+      </ul>
+
+      <h3>Nach dem Event</h3>
+      <ul>
+        <li>Historie durchsehen - zeigt geplante vs. tatsächliche Zeiten</li>
+        <li>Zeitplan für nächstes Event anpassen</li>
+        <li>Alte Band-Logos ggf. löschen</li>
+      </ul>
+
+      <div class="tip-box">
+        <strong>Profi-Tipp:</strong> Öffne das Admin-Panel auf einem Tablet und die Stage View auf einem großen Monitor/Beamer für optimale Kontrolle!
+      </div>
+    </div>
+
+    <!-- Technische Details -->
+    <div class="guide-section">
+      <h2>Technische Details</h2>
+
+      <h3>Datenbank</h3>
+      <p>
+        StageTimer nutzt SQLite für alle Daten. Die Datenbank-Datei <code>stagetimer.db</code> enthält:
+      </p>
+      <ul>
+        <li>Aktueller Zeitplan (bands)</li>
+        <li>Historie aller gespielten Sets (history)</li>
+        <li>Benutzer (users)</li>
+        <li>Band-Logo-Zuordnungen (band_logos)</li>
+        <li>Einstellungen (settings)</li>
+      </ul>
+
+      <h3>Echtzeit-Updates</h3>
+      <p>
+        Alle Anzeigen werden per WebSocket (Socket.IO) in Echtzeit aktualisiert.
+        Keine manuellen Neuladen nötig!
+      </p>
+
+      <h3>Neue Features in dieser Version</h3>
+      <ul>
+        <li><strong>Countdown-Format:</strong> MM:SS überall (Minuten:Sekunden)</li>
+        <li><strong>Orange Next-Band Balken:</strong> Bessere Sichtbarkeit für kommende Bands</li>
+        <li><strong>Smart Logo-Handling:</strong> Logos werden automatisch ausgeblendet bei Next-Band ohne Logo</li>
+        <li><strong>Verbesserte Historie:</strong> Zeigt ursprünglich geplante vs. tatsächliche Zeiten</li>
+        <li><strong>Automatisches Entfernen:</strong> Bands verschwinden automatisch nach dem Spielen</li>
+        <li><strong>Bessere Fehlerbehandlung:</strong> Verbesserte Fehlerbehandlung bei Zeit-Anpassungen</li>
+      </ul>
+    </div>
+
+    <!-- Support & Fehlerbehebung -->
+    <div class="guide-section">
+      <h2>Support & Fehlerbehebung</h2>
+
+      <h3>Häufige Probleme</h3>
+
+      <h4>Timer startet nicht automatisch</h4>
+      <ul>
+        <li>Prüfe ob die Startzeit in der Zukunft liegt</li>
+        <li>Prüfe ob Zeitkonflikte existieren</li>
+        <li>Seite neu laden</li>
+      </ul>
+
+      <h4>Band-Logo wird nicht angezeigt</h4>
+      <ul>
+        <li>Dateiformat prüfen (nur PNG, JPG, GIF, SVG, WEBP)</li>
+        <li>Datei zu groß? Max. 16MB</li>
+        <li>Logo neu hochladen</li>
+      </ul>
+
+      <h4>CSV-Upload schlägt fehl</h4>
+      <ul>
+        <li>Format prüfen: <code>date,band,start,end</code></li>
+        <li>Datum-Format: <code>YYYY-MM-DD</code></li>
+        <li>Zeit-Format: <code>HH:MM</code></li>
+        <li>Zeitkonflikte auflösen</li>
+      </ul>
+
+      <h4>Band verschwindet nicht aus Zeitplan</h4>
+      <ul>
+        <li>Warte bis die Band komplett fertig gespielt hat</li>
+        <li>Bei Problemen: Seite neu laden</li>
+        <li>Prüfe die Browser-Konsole auf WebSocket-Verbindungsprobleme</li>
+      </ul>
+    </div>
+
+    <!-- Versionshistorie -->
+    <div class="changelog-section">
+      <details class="changelog">
+        <summary>📋 Versionshistorie</summary>
+        <div class="changelog-content">
+
+          <h3>Version 2.0.1 - 2026-02-03</h3>
+
+          <h4>Hinzugefügt</h4>
+          <ul>
+            <li>Favicon-Set für alle Browser und Plattformen (PWA-ready)</li>
+            <li>Dark Mode Support für Anleitung-Seite (synchronisiert mit Admin-Panel)</li>
+            <li>Feature-Cards in Anleitung mit permanenten blauen Rahmen</li>
+            <li>Verbesserte CSS-Variablen (<code>--card-bg</code>, <code>--text-muted</code>) für konsistentes Theming</li>
+            <li>Copyright-Informationen mit Entwickler-Attribution (André Wetzel)</li>
+          </ul>
+
+          <h4>Geändert</h4>
+          <ul>
+            <li>MM:SS Countdown-Format überall (statt HH:MM:SS)</li>
+            <li>Next-Band Anzeige jetzt orange (statt blau) mit verbessertem Logo-Handling</li>
+            <li>Anleitung-Design überarbeitet und mit Admin-Panel-Theme vereinheitlicht</li>
+            <li>Guide-Link im Admin-Panel ohne Icon (cleaner Look)</li>
+            <li>Verbesserte Hover-Effekte für Feature-Cards mit Box-Shadow</li>
+          </ul>
+
+          <h4>Behoben</h4>
+          <ul>
+            <li>Countdown zeigte -106 Stunden statt korrekte Minuten</li>
+            <li>Schedule-Updates werden jetzt live in allen Views reflektiert</li>
+            <li>Bands werden automatisch aus Zeitplan entfernt nach Spielzeit</li>
+            <li>Historie zeigt korrekt ursprünglich geplante vs. tatsächliche Zeiten</li>
+            <li>HTTP 500 Fehler bei Zeitanpassung behoben</li>
+            <li>WebSocket-Verbindung sendet jetzt <code>schedule_updated</code> Event</li>
+          </ul>
+
+          <hr>
+
+          <h3>Version 2.0.0 - 2026-02-02</h3>
+
+          <h4>Hinzugefügt</h4>
+          <ul>
+            <li><strong>SQLite-Datenbank</strong> statt CSV/JSON-Dateien
+              <ul>
+                <li>Tabellen: bands, history, users, band_logos, settings</li>
+                <li>Automatische Migrations-Scripts (<code>migrate_to_db.py</code>)</li>
+              </ul>
+            </li>
+            <li><strong>Band-Logo-Integration</strong>
+              <ul>
+                <li>Upload von Logos pro Band</li>
+                <li>Smart Rename: Automatische Übertragung bei Bandnamen-Änderung</li>
+                <li>Unterstützte Formate: PNG, JPG, GIF, SVG, WEBP</li>
+                <li>Anzeige auf Stage-Display</li>
+              </ul>
+            </li>
+            <li><strong>Historie-System</strong>
+              <ul>
+                <li>Automatische Aufzeichnung aller gespielten Sets</li>
+                <li>Geplante vs. tatsächliche Zeiten</li>
+                <li>Soft-Delete Funktion (Einträge bleiben in DB)</li>
+                <li>Export-fähig für Auswertungen</li>
+              </ul>
+            </li>
+            <li><strong>CSV-Verwaltung</strong>
+              <ul>
+                <li>Beispiel-CSV-Download mit aktuellem Datum</li>
+                <li>Konflikterkennung beim Upload</li>
+                <li>Bulk-Import für große Events</li>
+              </ul>
+            </li>
+            <li><strong>Anleitung/Hilfeseite</strong> (<code>/guide</code>)
+              <ul>
+                <li>Vollständige Feature-Dokumentation</li>
+                <li>Best Practices für Events</li>
+                <li>Fehlersuche und Support-Informationen</li>
+              </ul>
+            </li>
+            <li><strong>Benutzerverwaltung</strong> im Admin-Panel
+              <ul>
+                <li>Benutzer erstellen/löschen direkt in der UI</li>
+                <li>Passwort-Hashing mit Werkzeug</li>
+              </ul>
+            </li>
+            <li><strong>Docker-Support</strong>
+              <ul>
+                <li>Dockerfile mit Multi-Stage-Build</li>
+                <li>docker-compose.yml für einfaches Deployment</li>
+                <li>Health-Check für Container-Monitoring</li>
+                <li>Persistent Volumes für DB und Uploads</li>
+              </ul>
+            </li>
+          </ul>
+
+          <h4>Geändert</h4>
+          <ul>
+            <li>Komplett neue Datenbank-Architektur mit SQLite</li>
+            <li>Verbesserte Admin-Panel-Oberfläche</li>
+            <li>Optimierte Real-Time-Updates via WebSocket</li>
+            <li>Bessere Fehlerbehandlung und Logging</li>
+          </ul>
+
+          <h4>Behoben</h4>
+          <ul>
+            <li>Performance-Probleme bei großen Zeitplänen</li>
+            <li>Race Conditions bei gleichzeitigen Updates</li>
+            <li>Memory Leaks bei langen Sessions</li>
+          </ul>
+
+          <hr>
+
+          <h3>Version 1.0.0 - 2024-02-13</h3>
+
+          <h4>Hinzugefügt</h4>
+          <ul>
+            <li>Grundlegende Timer-Funktionalität</li>
+            <li>CSV-basierte Zeitplan-Verwaltung</li>
+            <li>Admin-Panel für Zeitplan-Bearbeitung</li>
+            <li>Stage-Display mit Live-Countdown</li>
+            <li>Backstage-View für Crew</li>
+            <li>Timetable-View für Publikum</li>
+            <li>Benutzer-Authentifizierung (JSON-basiert)</li>
+            <li>WebSocket-basierte Echtzeit-Updates</li>
+            <li>Responsive Design für Mobile/Desktop</li>
+            <li>Warnsystem (Orange/Rot-Anzeigen)</li>
+            <li>Zeit-Anpassung während laufenden Events</li>
+            <li>Nachrichten-System für Bands</li>
+            <li>Logo-Upload für Stage-Branding</li>
+            <li>Wake-Lock für Mobile-Displays</li>
+            <li>Theme-Umschaltung (Hell/Dunkel)</li>
+          </ul>
+
+          <hr>
+
+          <div class="dev-info">
+            <p><strong>Entwickler-Informationen</strong></p>
+            <p><strong>Autor:</strong> André Wetzel</p>
+            <p><strong>Projekt:</strong> StageTimer - Webbasiertes Countdown-System für Live-Events</p>
+            <p><strong>Technologie-Stack:</strong> Flask, Socket.IO, SQLite, Docker</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9em;"><strong>Version-Schema:</strong></p>
+            <ul style="margin-left: 1.5rem; font-size: 0.9em;">
+              <li><strong>Major (X.0.0):</strong> Breaking Changes, neue Hauptfunktionen</li>
+              <li><strong>Minor (0.X.0):</strong> Neue Features, keine Breaking Changes</li>
+              <li><strong>Patch (0.0.X):</strong> Bug-Fixes, kleine Verbesserungen</li>
+            </ul>
+          </div>
+
+        </div>
+      </details>
+    </div>
+
+    <!-- Copyright -->
+    <div class="copyright">
+      <p><strong>StageTimer v2.0.1</strong> - Webbasiertes Countdown-System für Live-Events</p>
+      <p style="margin-top: 0.5rem;">
+        &copy; 2024-2026 André Wetzel |
+        Entwickelt für Live-Event-Management und Band-Scheduling
+      </p>
+      <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+        Technologie-Stack: Flask, Socket.IO, SQLite, Docker
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Synchronisiere Theme mit Admin-Panel
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+</body>
+</html>

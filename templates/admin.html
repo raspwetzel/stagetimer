@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>Admin Panel - Stagetimer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/img/fav/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/fav/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/img/fav/favicon-16x16.png">
+  <link rel="manifest" href="/static/img/fav/site.webmanifest">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script>
+    // Globale Socket.IO Verbindung
+    const socket = io();
+
+    // Debugging Event Handler
+    socket.on('connect', () => {
+      console.log('Socket.IO Verbindung hergestellt');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket.IO Verbindung verloren');
+    });
+
+    // Funktion zum Senden von Nachrichten
+    function sendMessage(duration) {
+      const message = document.getElementById('messageInput').value.trim();
+      const feedback = document.getElementById('messageFeedback');
+
+      if (!message) {
+        feedback.textContent = '✗ Bitte eine Nachricht eingeben';
+        feedback.style.color = 'var(--danger)';
+        setTimeout(() => {
+          feedback.textContent = '';
+        }, 2000);
+        return;
+      }
+
+      console.log('Sende Nachricht:', message, 'Dauer:', duration);
+      socket.emit('admin_message', {
+        message: message,
+        duration: duration
+      });
+
+      feedback.textContent = `✓ Nachricht gesendet (${duration} Sek)`;
+      feedback.style.color = '#2ecc71';
+
+      document.getElementById('messageInput').value = '';
+
+      setTimeout(() => {
+        feedback.textContent = '';
+      }, 2000);
+    }
+
+    // Funktion zum Aktualisieren der Vorschau
+    function updatePreview(data) {
+      console.log('Empfangene Daten:', data);
+
+      const previewContainer = document.querySelector('.timer-preview');
+      const previewBandName = document.getElementById('previewBandName');
+      const previewTime = document.getElementById('previewTime');
+      const previewProgress = document.getElementById('previewProgress');
+      const quickAdjustContainer = document.getElementById('quickAdjustContainer');
+
+      // Entferne alle Status-Klassen
+      previewContainer.classList.remove(
+        'preview-changeover',
+        'preview-playing',
+        'preview-warning-orange',
+        'preview-warning-red'
+      );
+
+      // Setze zuerst die Standardwerte für "Feierabend"
+      previewBandName.textContent = 'Feierabend';
+      previewTime.textContent = 'Danke an alle Beteiligten!';
+      previewProgress.style.width = '0%';
+      console.log('Standardwerte gesetzt');
+
+      // Nur wenn wir einen aktiven Status haben, überschreiben wir die Standardwerte
+      if (data.status === 'playing') {
+        console.log('Status: Playing');
+        previewBandName.textContent = data.band;
+
+        const minutes = Math.floor(data.remaining / 60);
+        const seconds = Math.floor(data.remaining % 60);
+        previewTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        const progress = (data.remaining / data.total_duration) * 100;
+        previewProgress.style.width = `${progress}%`;
+
+        if (data.remaining <= data.warn_red * 60) {
+          previewContainer.classList.add('preview-warning-red');
+        } else if (data.remaining <= data.warn_orange * 60) {
+          previewContainer.classList.add('preview-warning-orange');
+        } else {
+          previewContainer.classList.add('preview-playing');
+        }
+
+        // Zeige Quick-Adjust Buttons wenn Band spielt
+        quickAdjustContainer.style.display = 'block';
+      } else if (data.status === 'waiting' && data.next_band) {
+        console.log('Status: Waiting, next band:', data.next_band);
+        previewBandName.textContent = data.next_band.band;
+
+        if (data.next_band.countdown !== undefined) {
+          const minutesUntilStart = Math.floor(Math.abs(data.next_band.countdown) / 60);
+          const secondsUntilStart = Math.floor(Math.abs(data.next_band.countdown) % 60);
+          previewTime.textContent = `-${minutesUntilStart.toString().padStart(2, '0')}:${secondsUntilStart.toString().padStart(2, '0')}`;
+        }
+
+        previewProgress.style.width = '100%';
+        previewContainer.classList.add('preview-changeover');
+
+        // Verstecke Quick-Adjust Buttons wenn keine Band spielt
+        quickAdjustContainer.style.display = 'none';
+      } else {
+        console.log('Status:', data.status, '- zeige Feierabend');
+
+        // Verstecke Quick-Adjust Buttons wenn keine Band spielt
+        quickAdjustContainer.style.display = 'none';
+      }
+    }
+
+    // Funktion zum Anpassen der Zeit
+    function adjustTime(minutes) {
+      console.log('Adjusting time by', minutes, 'minutes');
+
+      const formData = new FormData();
+      formData.append('action', 'adjust_time');
+      formData.append('adjust_minutes', minutes);
+
+      fetch('/admin', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        // Behandle auch HTTP-Fehler (400, 500, etc.) und parse trotzdem JSON
+        return response.json().then(data => {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(result => {
+        console.log('Adjust time response:', result);
+        const feedback = document.getElementById('adjustFeedback');
+        if (result.ok && result.data.success) {
+          feedback.textContent = `✓ ${result.data.message}`;
+          feedback.style.color = '#2ecc71';
+
+          // Lösche Feedback nach 2 Sekunden
+          setTimeout(() => {
+            feedback.textContent = '';
+          }, 2000);
+        } else {
+          feedback.textContent = `✗ ${result.data.message || 'Fehler beim Anpassen der Zeit'}`;
+          feedback.style.color = 'var(--danger)';
+        }
+      })
+      .catch(error => {
+        console.error('Error adjusting time:', error);
+        const feedback = document.getElementById('adjustFeedback');
+        feedback.textContent = '✗ Fehler beim Anpassen der Zeit';
+        feedback.style.color = 'var(--danger)';
+      });
+    }
+
+    // Socket.IO Event Handler registrieren
+    socket.on('time_update', updatePreview);
+    socket.on('band_update', updatePreview);
+    socket.on('next_band', updatePreview);
+
+    // Schedule Update Event - lädt die Seite neu wenn Schedule sich ändert
+    socket.on('schedule_updated', function(data) {
+      console.log('Schedule updated:', data);
+      // Lade die Seite neu um die aktualisierte Tabelle zu zeigen
+      location.reload();
+    });
+    socket.on('admin_message', (data) => {
+      console.log('Nachricht gesendet:', data);
+    });
+
+    // Initialer Status-Check mit Cache-Busting
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('/status?' + new Date().getTime())  // Cache-Busting
+        .then(response => response.json())
+        .then(data => {
+          console.log('Initialer Status:', data);
+          updatePreview(data);
+        })
+        .catch(error => {
+          console.error('Fehler beim Laden des Status:', error);
+        });
+
+      // Enter-Taste zum Senden (Standard: 15 Sekunden)
+      document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendMessage(15);
+        }
+      });
+    });
+  </script>
+  <style>
+    :root {
+      /* Light Theme */
+      --background: #ffffff;
+      --text: #1a1a1a;
+      --border: #e5e7eb;
+      --hover: #f3f4f6;
+      --primary: #2563eb;
+      --danger: #dc2626;
+      --danger-disabled: #dc262680;
+      --warning: #f59e0b;
+      --input-background: #ffffff;
+      --input-border: #d1d5db;
+      --section-bg: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      /* Dark Theme */
+      --background: #1a1a1a;
+      --text: #ffffff;
+      --border: #374151;
+      --hover: #2d3748;
+      --primary: #3b82f6;
+      --danger: #ef4444;
+      --danger-disabled: #ef444480;
+      --warning: #f59e0b;
+      --input-background: #2d3748;
+      --input-border: #4b5563;
+      --section-bg: #1e293b;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .section {
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Input Styling */
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    input[type="password"],
+    input[type="file"] {
+      background: var(--input-background);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      width: 100%;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+
+    /* Label Styling */
+    label {
+      color: var(--text);
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    /* Table Styling */
+    table {
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    th {
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      text-align: left;
+      padding: 1rem;
+      font-size: 0.9rem;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: var(--hover);
+    }
+
+    /* Button Styling */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(110%);
+    }
+
+    .btn-secondary {
+      background: var(--input-background);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--hover);
+    }
+
+    /* Form Container Styling */
+    .form-container {
+      background: var(--section-bg);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Error Message Styling */
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .preview-container {
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      padding: 2rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+
+    .timer-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text);
+    }
+
+    .band-name-preview {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .time-preview {
+      font-size: 4rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-container-preview {
+      width: 100%;
+      background: var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      height: 2rem;
+      position: relative;
+      border: 1px solid var(--border);
+    }
+
+    .progress-bar-preview {
+      width: 100%;
+      height: 100%;
+      background: #2ecc71;
+      transition: width 0.5s ease-out, background-color 0.5s ease-out;
+    }
+
+    /* Status-Farben für die Vorschau */
+    .preview-changeover .progress-bar-preview {
+      background: #3498db;
+    }
+
+    .preview-playing .progress-bar-preview {
+      background: #2ecc71;
+    }
+
+    .preview-warning-orange .progress-bar-preview {
+      background: var(--warning);
+    }
+
+    .preview-warning-red .progress-bar-preview {
+      background: var(--danger);
+    }
+
+    .schedule-container {
+      margin: 2rem 0;
+    }
+
+    /* Logo Preview Styling */
+    img.logo-preview {
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-top: 1rem;
+    }
+
+    /* Header Styling */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .theme-toggle {
+      background: var(--input-background);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .theme-toggle svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .logout-btn {
+      background: var(--danger);
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    /* User List Styling */
+    .user-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0;
+    }
+
+    .user-list li {
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      background: var(--input-background);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .delete-user {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+      padding: 0.25rem 0.5rem;
+      margin-left: 1rem;
+    }
+
+    .delete-user:hover {
+      color: var(--danger);
+      opacity: 0.8;
+    }
+
+    /* File Input Wrapper */
+    .file-input-wrapper {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      flex: 1;
+    }
+
+    /* Checkbox Styling */
+    input[type="checkbox"] {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Add Band Form Styling */
+    .add-band-form {
+      background: var(--section-bg);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr 150px 100px;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    /* Admin Controls Layout */
+    .admin-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      margin: 2rem auto;
+      width: 80%;
+      max-width: 1600px;
+      padding: 0 2rem;
+    }
+
+    .section {
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      width: 100%;
+    }
+
+    /* Button Groups */
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    /* Quick Adjust Buttons */
+    .quick-adjust-buttons {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-adjust-buttons .btn {
+      flex: 1;
+      min-width: 100px;
+      font-size: 1rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .admin-controls {
+        width: 95%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Burger Menu */
+    .burger-menu {
+      position: relative;
+      z-index: 3000;
+    }
+
+    .burger-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      height: 50px;
+      transition: all 0.3s;
+    }
+
+    .burger-button:hover {
+      background: var(--hover);
+      transform: scale(1.1);
+    }
+
+    .burger-button svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .burger-dropdown {
+      position: absolute;
+      top: 60px;
+      right: 0;
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.5rem;
+      min-width: 200px;
+      display: none;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .burger-dropdown.show {
+      display: block;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .burger-dropdown a {
+      display: block;
+      padding: 1rem;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 0.5rem;
+      transition: background 0.2s;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .burger-dropdown a:hover {
+      background: var(--hover);
+    }
+
+    .burger-dropdown a.active {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Band Logo Button Styles */
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 0.4rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .btn-icon svg {
+      color: var(--text);
+      transition: color 0.2s;
+    }
+
+    .btn-icon:hover svg {
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <div class="header">
+      <h1>Admin Panel</h1>
+      <div class="user-info">
+        <button class="theme-toggle" id="theme-toggle" title="Theme wechseln">
+          <svg class="light-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <svg class="dark-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <span class="theme-text">Theme</span>
+        </button>
+        <span>{{ current_user.id }}</span>
+        <a href="/logout" class="logout-btn">Logout</a>
+        <!-- Burger Menu -->
+        <div class="burger-menu" id="burgerMenu">
+          <button class="burger-button" id="burgerButton">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+          <div class="burger-dropdown" id="burgerDropdown">
+            <a href="/stage">Stage</a>
+            <a href="/backstage">Backstage</a>
+            <a href="/timetable">Timetable</a>
+            <a href="/admin" class="active">Admin</a>
+            <a href="/guide" style="color: var(--primary);">Anleitung</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if schedule_conflicts|length > 0 %}
+    <div class="section" style="background-color: rgba(220, 38, 38, 0.1); border: 2px solid var(--danger); margin-bottom: 2rem;">
+      <h2 style="color: var(--danger); display: flex; align-items: center; gap: 0.5rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        FEHLER: Zeitkonflikte in schedule.csv gefunden!
+      </h2>
+      <p style="margin-bottom: 1rem; color: var(--text);">
+        <strong>Die CSV-Datei wurde NICHT geladen, da Zeitüberschneidungen gefunden wurden.</strong><br>
+        Bitte korrigiere die folgenden Konflikte in der schedule.csv und klicke dann auf "CSV neu laden".
+      </p>
+      <div style="background: var(--background); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;">
+        {% for conflict in schedule_conflicts %}
+          <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: var(--surface); border-left: 4px solid var(--danger); border-radius: 0.25rem;">
+            {% if conflict.error %}
+              <strong>Fehler:</strong> {{ conflict.error }}
+            {% else %}
+              <strong>Zeile {{ conflict.row }}:</strong>
+              "{{ conflict.band1 }}" ({{ conflict.time1 }}) überschneidet sich mit "{{ conflict.band2 }}" ({{ conflict.time2 }})
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="section">
+      <h2>Display Vorschau</h2>
+      <div class="preview-container">
+        <div class="timer-preview">
+          <div class="band-name-preview" id="previewBandName">-</div>
+          <div class="time-preview" id="previewTime">--:--</div>
+          <div class="progress-container-preview">
+            <div class="progress-bar-preview" id="previewProgress"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-adjust-container" id="quickAdjustContainer" style="margin-top: 1.5rem; display: none;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--text);">Zeit anpassen</h3>
+        <div class="quick-adjust-buttons">
+          <button class="btn btn-primary" onclick="adjustTime(1)">+1 Min</button>
+          <button class="btn btn-primary" onclick="adjustTime(5)">+5 Min</button>
+          <button class="btn btn-primary" onclick="adjustTime(10)">+10 Min</button>
+        </div>
+        <div class="quick-adjust-buttons" style="margin-top: 0.75rem;">
+          <button class="btn btn-danger" onclick="adjustTime(-1)">-1 Min</button>
+          <button class="btn btn-danger" onclick="adjustTime(-5)">-5 Min</button>
+          <button class="btn btn-danger" onclick="adjustTime(-10)">-10 Min</button>
+        </div>
+        <div id="adjustFeedback" style="margin-top: 0.75rem; color: var(--text); font-size: 0.9rem;"></div>
+      </div>
+
+      <div class="message-container" style="margin-top: 1.5rem;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--text);">Nachricht an Band</h3>
+        <div class="form-group">
+          <input type="text" id="messageInput" placeholder="Nachricht eingeben..." class="form-control" style="margin-bottom: 0.75rem;">
+          <div class="quick-adjust-buttons">
+            <button class="btn btn-primary" onclick="sendMessage(10)">10 Sek</button>
+            <button class="btn btn-primary" onclick="sendMessage(15)">15 Sek</button>
+            <button class="btn btn-primary" onclick="sendMessage(30)">30 Sek</button>
+          </div>
+        </div>
+        <div id="messageFeedback" style="margin-top: 0.75rem; color: var(--text); font-size: 0.9rem;"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Neuen Slot anlegen</h2>
+      <div id="addBandError" class="error-message"></div>
+      <form method="POST" id="addBandForm" class="add-band-form">
+        <input type="hidden" name="action" value="add_band">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Datum</label>
+            <input type="date" name="date" value="{{ today }}" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Bandname</label>
+            <input type="text" name="band" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Startzeit</label>
+            <input type="time" name="start" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Endzeit</label>
+            <input type="time" name="end" class="form-control" required>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Hinzufügen</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <h2>Zeitplan</h2>
+      <form method="post" id="scheduleForm">
+        <input type="hidden" name="action" id="formAction" value="">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAll" title="Alle auswählen"></th>
+              <th>Datum</th>
+              <th>Band</th>
+              <th>Start</th>
+              <th>Ende</th>
+              <th>Dauer</th>
+              <th>Logo</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleTableBody">
+            {% for band in schedule %}
+            <tr>
+              <td>
+                <input type="checkbox" name="selected[]" value="{{ loop.index0 }}">
+              </td>
+              <td>
+                <input type="date" name="date_{{ loop.index0 }}" value="{{ band.date }}" required>
+              </td>
+              <td>
+                <input type="text" name="band_{{ loop.index0 }}" value="{{ band.band }}" required>
+              </td>
+              <td>
+                <input type="time" name="start_{{ loop.index0 }}" value="{{ band.start }}" required>
+              </td>
+              <td>
+                <input type="time" name="end_{{ loop.index0 }}" value="{{ band.end }}" required>
+              </td>
+              <td style="text-align: center; color: #666;">
+                {{ band.duration }} Min
+                {% if band.end_date != band.date %}
+                  <span style="color: var(--warning); font-size: 0.85em;" title="Endet am {{ band.end_date }}">(+1 Tag)</span>
+                {% endif %}
+              </td>
+              <td style="text-align: center; padding: 0.5rem;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                  {% if band.band in band_logos %}
+                    <img src="{{ url_for('static', filename='uploads/band_logos/' + band_logos[band.band]) }}"
+                         alt="{{ band.band }}"
+                         style="max-height: 40px; max-width: 60px; object-fit: contain; border-radius: 4px;">
+                    <button type="button" class="btn-icon" onclick="deleteBandLogo('{{ band.band }}')" title="Logo löschen">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  {% else %}
+                    <button type="button" class="btn-icon" onclick="openLogoUpload('{{ band.band }}')" title="Logo hochladen">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  {% endif %}
+                </div>
+                <input type="file" id="logoInput_{{ band.band }}" accept="image/*" style="display: none;" onchange="uploadBandLogo('{{ band.band }}', this)">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="button-group">
+          <button type="submit" onclick="submitForm('save')" class="btn btn-primary">Änderungen speichern</button>
+          <button type="submit" onclick="submitForm('delete')" class="btn btn-danger" id="deleteButton" disabled>Ausgewählte löschen</button>
+          <button type="submit" onclick="submitForm('reload')" class="btn btn-secondary">CSV neu laden</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="section">
+      <h2>CSV Verwaltung</h2>
+      <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+        Hier kannst du eine CSV-Datei hochladen oder eine Beispiel-CSV herunterladen, die als Vorlage dient.
+      </p>
+
+      <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
+        <!-- CSV Upload -->
+        <div style="background: var(--surface); padding: 1.5rem; border-radius: 0.5rem;">
+          <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 1rem;">CSV hochladen</h3>
+          <form id="uploadCsvForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="file-input-wrapper">
+              <input type="file" name="csv_file" id="csvFileInput" accept=".csv" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              CSV hochladen
+            </button>
+          </form>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 0;">
+            Die CSV wird validiert und bei Konflikten abgelehnt.
+          </p>
+        </div>
+
+        <!-- CSV Download -->
+        <div style="background: var(--surface); padding: 1.5rem; border-radius: 0.5rem;">
+          <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 1rem;">Beispiel-CSV herunterladen</h3>
+          <p style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+            Lade eine korrekt formatierte Beispiel-CSV herunter, die du als Vorlage verwenden kannst.
+          </p>
+          <a href="/download_example_csv" class="btn btn-secondary" style="width: 100%; text-align: center; display: inline-block; text-decoration: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+            Beispiel herunterladen
+          </a>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 0;">
+            Format: date, band, start, end
+          </p>
+        </div>
+      </div>
+
+      <!-- Upload Status/Meldung -->
+      <div id="uploadStatus" style="display: none; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;"></div>
+    </div>
+
+    <!-- Historie -->
+    <div class="section">
+      <h2 style="display: flex; align-items: center; justify-content: space-between;">
+        <span>Historie</span>
+        <button type="button" class="btn btn-danger" onclick="clearAllHistory()" id="clearAllHistoryBtn" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">
+          Gesamte Historie leeren
+        </button>
+      </h2>
+
+      <div id="historyContainer">
+        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">
+          Lade Historie...
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Logo Einstellungen</h2>
+      <form method="POST" enctype="multipart/form-data">
+        <div class="file-input-wrapper">
+          <input type="file" name="logo" class="form-control">
+          <button class="btn btn-primary" name="action" value="upload_logo">Logo hochladen</button>
+        </div>
+      </form>
+
+      <form method="POST" style="margin-top: 1rem;">
+        <input type="hidden" name="action" value="set_logo_size">
+        <div class="form-group">
+          <label>Logo-Größe (% der Bildschirmbreite)</label>
+          <input type="number" name="logo_size_percent" min="1" max="100" value="{{ logo_size_percent }}" class="form-control" required>
+        </div>
+        <button class="btn btn-primary" type="submit">Größe speichern</button>
+      </form>
+
+      <div class="logo-container">
+        {% if logo %}
+          <img src="/uploads/{{ logo }}" class="logo-preview" style="max-width: {{ logo_size_percent }}%;">
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Warnzeit-Einstellungen</h2>
+      <form method="POST">
+        <input type="hidden" name="action" value="update_config">
+        <div class="form-group">
+          <label>Orange Warnung (Minuten)</label>
+          <input type="number" name="warn_orange" value="{{ warn_orange }}" class="form-control" required min="1">
+        </div>
+        <div class="form-group" style="margin-top: 1rem;">
+          <label>Rote Warnung (Minuten)</label>
+          <input type="number" name="warn_red" value="{{ warn_red }}" class="form-control" required min="1">
+        </div>
+        <button class="btn btn-primary" type="submit" style="margin-top: 1rem;">Warnzeiten speichern</button>
+      </form>
+    </div>
+
+    {% if current_user.id in ['admin', 'Andre'] %}
+    <div class="section">
+      <h2>Benutzerverwaltung</h2>
+      <form method="POST">
+        <input type="hidden" name="action" value="add_user">
+        <div class="form-group">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+              <label>Benutzername</label>
+              <input type="text" name="new_username" class="form-control" required>
+            </div>
+            <div>
+              <label>Passwort</label>
+              <input type="password" name="new_password" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Nutzer erstellen</button>
+      </form>
+
+      <h3 style="margin-top: 1.5rem;">Vorhandene Benutzer</h3>
+      <ul class="user-list">
+        {% for user in users %}
+          <li>
+            <span>{{ user.username }}</span>
+            {% if user.username not in ['admin', 'Andre'] %}
+              <form method="POST" style="display: inline;">
+                <input type="hidden" name="action" value="delete_user">
+                <input type="hidden" name="username" value="{{ user.username }}">
+                <button type="submit" class="delete-user" title="Nutzer löschen">×</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    // Theme-Switching Logik
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const lightIcon = themeToggle.querySelector('.light-icon');
+    const darkIcon = themeToggle.querySelector('.dark-icon');
+    
+    // Lade gespeichertes Theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    html.setAttribute('data-theme', savedTheme);
+    updateIcons(savedTheme);
+    
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateIcons(newTheme);
+    });
+    
+    function updateIcons(theme) {
+      if (theme === 'light') {
+        lightIcon.style.display = 'block';
+        darkIcon.style.display = 'none';
+      } else {
+        lightIcon.style.display = 'none';
+        darkIcon.style.display = 'block';
+      }
+    }
+
+    // Speichere die Scroll-Position vor dem Neuladen
+    function saveScrollPosition() {
+      sessionStorage.setItem('scrollPosition', window.scrollY);
+    }
+
+    // Stelle die Scroll-Position wieder her
+    function restoreScrollPosition() {
+      const scrollPosition = sessionStorage.getItem('scrollPosition');
+      if (scrollPosition) {
+        window.scrollTo(0, parseInt(scrollPosition));
+        sessionStorage.removeItem('scrollPosition');
+      }
+    }
+
+    // Führe die Wiederherstellung nach dem Laden der Seite aus
+    document.addEventListener('DOMContentLoaded', restoreScrollPosition);
+
+    document.getElementById('addBandForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      saveScrollPosition();
+      
+      const formData = new FormData(this);
+      const errorDiv = document.getElementById('addBandError');
+      
+      fetch('/admin', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => { throw new Error(text) });
+        }
+        // Erfolgreiche Übermittlung
+        errorDiv.classList.remove('show');
+        window.location.reload();
+      })
+      .catch(error => {
+        // Zeige Fehlermeldung an
+        errorDiv.textContent = error.message;
+        errorDiv.classList.add('show');
+      });
+    });
+
+    // Füge Event Listener für alle Edit-Formulare hinzu
+    document.querySelectorAll('form').forEach(form => {
+      if (form.querySelector('button[value="edit_band"]')) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          saveScrollPosition();
+          
+          const formData = new FormData(this);
+          const row = this.closest('tr');
+          const errorDiv = row.querySelector('.edit-error') || createErrorDiv(row);
+          
+          fetch('/admin', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => {
+            if (!response.ok) {
+              return response.text().then(text => { throw new Error(text) });
+            }
+            // Erfolgreiche Übermittlung
+            errorDiv.classList.remove('show');
+            window.location.reload();
+          })
+          .catch(error => {
+            // Zeige Fehlermeldung an
+            errorDiv.textContent = error.message;
+            errorDiv.classList.add('show');
+          });
+        });
+      }
+    });
+
+    // Füge auch Event Listener für Delete-Buttons hinzu
+    document.querySelectorAll('button[value="delete_band"]').forEach(button => {
+      button.addEventListener('click', function() {
+        saveScrollPosition();
+      });
+    });
+
+    // Füge Event Listener für alle anderen Formulare hinzu, die ein Neuladen bewirken
+    document.querySelectorAll('form').forEach(form => {
+      const action = form.querySelector('input[name="action"]');
+      if (action && ['set_logo_size', 'upload_logo', 'update_config', 'add_user'].includes(action.value)) {
+        form.addEventListener('submit', saveScrollPosition);
+      }
+    });
+
+    function createErrorDiv(row) {
+      const cell = row.insertCell();
+      cell.colSpan = 6;
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message edit-error';
+      cell.appendChild(errorDiv);
+      return errorDiv;
+    }
+
+    // Zähler für neue Zeilen
+    let newRowCounter = 0;
+
+    // Funktion zum Aktualisieren des Lösch-Buttons
+    function updateDeleteButton() {
+      const checkboxes = document.querySelectorAll('input[name="selected[]"]:checked');
+      const deleteButton = document.getElementById('deleteButton');
+      deleteButton.disabled = checkboxes.length === 0;
+    }
+
+    // Event-Listener für "Alle auswählen" Checkbox
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+      const checkboxes = document.querySelectorAll('input[name="selected[]"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+      updateDeleteButton();
+    });
+
+    // Event-Listener für einzelne Checkboxen
+    document.addEventListener('change', function(e) {
+      if (e.target.name === 'selected[]') {
+        updateDeleteButton();
+      }
+    });
+
+    // Formular-Submit-Funktion
+    function submitForm(action) {
+      document.getElementById('formAction').value = action;
+    }
+
+    // Burger Menu Funktionalität
+    const burgerButton = document.getElementById('burgerButton');
+    const burgerDropdown = document.getElementById('burgerDropdown');
+
+    // Toggle Dropdown
+    burgerButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      burgerDropdown.classList.toggle('show');
+    });
+
+    // Schließe Dropdown beim Klick außerhalb
+    document.addEventListener('click', (e) => {
+      if (!burgerDropdown.contains(e.target) && e.target !== burgerButton) {
+        burgerDropdown.classList.remove('show');
+      }
+    });
+
+    // CSV Upload Handler
+    document.getElementById('uploadCsvForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const formData = new FormData();
+      const fileInput = document.getElementById('csvFileInput');
+      const uploadStatus = document.getElementById('uploadStatus');
+
+      if (!fileInput.files[0]) {
+        uploadStatus.style.display = 'block';
+        uploadStatus.style.background = 'rgba(220, 38, 38, 0.1)';
+        uploadStatus.style.border = '1px solid var(--danger)';
+        uploadStatus.style.color = 'var(--danger)';
+        uploadStatus.textContent = 'Bitte wähle eine CSV-Datei aus.';
+        return;
+      }
+
+      formData.append('csv_file', fileInput.files[0]);
+
+      // Zeige Loading-Status
+      uploadStatus.style.display = 'block';
+      uploadStatus.style.background = 'rgba(59, 130, 246, 0.1)';
+      uploadStatus.style.border = '1px solid var(--primary)';
+      uploadStatus.style.color = 'var(--primary)';
+      uploadStatus.textContent = 'CSV wird hochgeladen und validiert...';
+
+      try {
+        const response = await fetch('/upload_csv', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Erfolg
+          uploadStatus.style.background = 'rgba(34, 197, 94, 0.1)';
+          uploadStatus.style.border = '1px solid var(--success)';
+          uploadStatus.style.color = 'var(--success)';
+          uploadStatus.innerHTML = '<strong>Erfolg!</strong> ' + result.message + '<br>Die Seite wird neu geladen...';
+
+          // Seite nach 2 Sekunden neu laden
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          // Fehler
+          uploadStatus.style.background = 'rgba(220, 38, 38, 0.1)';
+          uploadStatus.style.border = '1px solid var(--danger)';
+          uploadStatus.style.color = 'var(--danger)';
+          uploadStatus.innerHTML = '<strong>Fehler:</strong> ' + result.message.replace(/\n/g, '<br>');
+        }
+      } catch (error) {
+        uploadStatus.style.background = 'rgba(220, 38, 38, 0.1)';
+        uploadStatus.style.border = '1px solid var(--danger)';
+        uploadStatus.style.color = 'var(--danger)';
+        uploadStatus.innerHTML = '<strong>Fehler:</strong> ' + error.message;
+      }
+    });
+
+    // Band Logo Upload und Delete Funktionen
+    function openLogoUpload(bandName) {
+      const input = document.getElementById(`logoInput_${bandName}`);
+      input.click();
+    }
+
+    async function uploadBandLogo(bandName, input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('logo_file', file);
+      formData.append('band_name', bandName);
+
+      try {
+        const response = await fetch('/upload_band_logo', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Seite neu laden, um das Logo anzuzeigen
+          window.location.reload();
+        } else {
+          alert('Fehler: ' + result.message);
+        }
+      } catch (error) {
+        alert('Fehler beim Hochladen: ' + error.message);
+      }
+    }
+
+    async function deleteBandLogo(bandName) {
+      if (!confirm(`Logo für "${bandName}" wirklich löschen?`)) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('band_name', bandName);
+
+      try {
+        const response = await fetch('/delete_band_logo', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Seite neu laden
+          window.location.reload();
+        } else {
+          alert('Fehler: ' + result.message);
+        }
+      } catch (error) {
+        alert('Fehler beim Löschen: ' + error.message);
+      }
+    }
+
+    // ==================== HISTORIE ====================
+
+    async function loadHistory() {
+      try {
+        const response = await fetch('/api/history');
+        const data = await response.json();
+
+        const container = document.getElementById('historyContainer');
+
+        if (!data.success || !data.history || data.history.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Keine Historie vorhanden</p>';
+          document.getElementById('clearAllHistoryBtn').disabled = true;
+          return;
+        }
+
+        // Erstelle Historie-Tabelle
+        let html = '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: var(--bg-secondary); text-align: left;">';
+        html += '<th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Band</th>';
+        html += '<th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Datum</th>';
+        html += '<th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Geplant</th>';
+        html += '<th style="padding: 0.75rem; border-bottom: 2px solid var(--border);">Tatsächlich</th>';
+        html += '<th style="padding: 0.75rem; border-bottom: 2px solid var(--border); text-align: center;">Dauer</th>';
+        html += '<th style="padding: 0.75rem; border-bottom: 2px solid var(--border); text-align: center;">Aktion</th>';
+        html += '</tr></thead><tbody>';
+
+        data.history.forEach(entry => {
+          const actualStart = entry.actual_start ? new Date(entry.actual_start).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}) : '-';
+          const actualEnd = entry.actual_end ? new Date(entry.actual_end).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}) : '-';
+
+          html += `<tr style="border-bottom: 1px solid var(--border);">`;
+          html += `<td style="padding: 0.75rem; color: var(--text);"><strong>${entry.band_name}</strong></td>`;
+          html += `<td style="padding: 0.75rem; color: var(--text-muted);">${entry.scheduled_date}</td>`;
+          html += `<td style="padding: 0.75rem; color: var(--text-muted);">${entry.scheduled_start} - ${entry.scheduled_end}</td>`;
+          html += `<td style="padding: 0.75rem; color: var(--text-muted);">${actualStart} - ${actualEnd}</td>`;
+          html += `<td style="padding: 0.75rem; text-align: center; color: var(--text-muted);">${entry.duration} Min</td>`;
+          html += `<td style="padding: 0.75rem; text-align: center;">`;
+          html += `<button type="button" class="btn btn-danger" onclick="removeHistoryEntry(${entry.id})" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">Entfernen</button>`;
+          html += `</td>`;
+          html += `</tr>`;
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        document.getElementById('clearAllHistoryBtn').disabled = false;
+
+      } catch (error) {
+        console.error('Fehler beim Laden der Historie:', error);
+        document.getElementById('historyContainer').innerHTML = '<p style="color: var(--danger); text-align: center; padding: 2rem;">Fehler beim Laden der Historie</p>';
+      }
+    }
+
+    async function removeHistoryEntry(historyId) {
+      if (!confirm('Diesen Eintrag wirklich aus der Historie entfernen?')) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('history_id', historyId);
+
+      try {
+        const response = await fetch('/api/history/hide', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Historie neu laden
+          await loadHistory();
+        } else {
+          alert('Fehler: ' + result.message);
+        }
+      } catch (error) {
+        alert('Fehler beim Entfernen: ' + error.message);
+      }
+    }
+
+    async function clearAllHistory() {
+      if (!confirm('Wirklich die gesamte Historie leeren? Dies kann nicht rückgängig gemacht werden!')) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/history/hide_all', {
+          method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Historie neu laden
+          await loadHistory();
+        } else {
+          alert('Fehler: ' + result.message);
+        }
+      } catch (error) {
+        alert('Fehler beim Leeren der Historie: ' + error.message);
+      }
+    }
+
+    // Lade Historie beim Seitenload
+    document.addEventListener('DOMContentLoaded', () => {
+      loadHistory();
+
+      // Aktualisiere Historie alle 30 Sekunden
+      setInterval(loadHistory, 30000);
+    });
+
+  </script>
+</body>
+</html>

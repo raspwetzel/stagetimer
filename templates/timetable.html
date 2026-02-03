@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+  <title>Timetable</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/img/fav/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/fav/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/img/fav/favicon-16x16.png">
+  <link rel="manifest" href="/static/img/fav/site.webmanifest">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <style>
+    :root {
+      --band-name-size-portrait: min(3rem, 8vw);
+      --time-size-portrait: min(10rem, 25vw);
+      --band-name-size-landscape: min(4rem, 12vh);
+      --time-size-landscape: min(14rem, 35vh);
+      --progress-height-portrait: min(3rem, 8vw);
+      --progress-height-landscape: min(4rem, 12vh);
+    }
+
+    body {
+      margin: 0;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--background);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    .timetable-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    /* Top Header Bar with Logo and Menu */
+    .top-header-bar {
+      background: rgba(0, 0, 0, 0.5);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+      padding: 1.5rem;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 10000;
+    }
+
+    .header-logo {
+      height: auto;
+      max-height: 80px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* Current band info styles for schedule item */
+    .schedule-item-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .schedule-item-timer {
+      position: absolute;
+      right: 1rem;
+      bottom: 0;
+      font-size: min(1.5rem, 4.5vw);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+    }
+
+    .schedule-item-progress {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      height: 10px;
+      margin-top: 0.5rem;
+    }
+
+    .schedule-item-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #ffffff;
+      transition: width 0.5s ease-out, background-color 0.5s ease-out;
+    }
+
+    .schedule-item-progress-bar.warning-orange {
+      background: var(--warning);
+    }
+
+    .schedule-item-progress-bar.warning-red {
+      background: var(--danger);
+    }
+
+    /* Day Navigation */
+    .day-navigation {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .day-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 1rem;
+    }
+
+    .day-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .day-button.active {
+      background: #2ecc71;
+      border-color: #2ecc71;
+    }
+
+    /* Schedule List */
+    .schedule-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .schedule-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .schedule-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateX(5px);
+    }
+
+    .schedule-item.current {
+      background: rgba(46, 204, 113, 0.2);
+      border-color: #2ecc71;
+    }
+
+    .schedule-item-time {
+      font-size: min(1.3rem, 4vw);
+      font-weight: 600;
+      color: #3498db;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .schedule-item-band {
+      font-size: min(2.5rem, 7vw);
+      font-weight: 700;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    /* Neue Farbklassen */
+    .status-changeover .progress-bar {
+      background: #3498db;  /* Blau für Changeover */
+    }
+
+    .status-playing .progress-bar {
+      background: #2ecc71;  /* Grün für spielende Band */
+    }
+
+    .warning-orange .progress-bar {
+      background: var(--warning);  /* Orange für Warnung */
+    }
+
+    .warning-red .progress-bar {
+      background: var(--danger);  /* Rot für kritische Zeit */
+    }
+
+    /* Blinkender Counter für rote Phase */
+    @keyframes warning-blink {
+      0%, 80% {
+        color: var(--text);
+      }
+      81%, 100% {
+        color: var(--danger);
+      }
+    }
+
+    .warning-red .time {
+      animation: warning-blink 2s infinite;
+      color: var(--danger);
+    }
+
+    /* Logo styling moved to top-header-bar */
+
+    @media (orientation: landscape) {
+      .timer-container {
+        padding: 0.5rem;
+        gap: 1vh;
+      }
+
+      .band-name {
+        font-size: var(--band-name-size-landscape);
+      }
+
+      .time {
+        font-size: var(--time-size-landscape);
+      }
+
+      .progress-container {
+        height: var(--progress-height-landscape);
+      }
+
+      .header-logo {
+        max-height: 70px;
+      }
+    }
+
+    /* Für kleine Bildschirme im Hochformat (z.B. iPhone SE) */
+    @media (max-height: 667px) and (orientation: portrait) {
+      .timer-container {
+        gap: 1vh;
+      }
+
+      .band-name {
+        font-size: min(3rem, 10vw);
+      }
+
+      .time {
+        font-size: min(12rem, 30vw);
+      }
+
+      .progress-container {
+        height: min(4rem, 12vw);
+      }
+    }
+
+    /* Für sehr kleine Bildschirme im Querformat */
+    @media (max-height: 400px) and (orientation: landscape) {
+      .timer-container {
+        gap: 0.5vh;
+      }
+
+      .band-name {
+        font-size: min(2.5rem, 8vh);
+      }
+
+      .time {
+        font-size: min(10rem, 25vh);
+      }
+
+      .progress-container {
+        height: min(3rem, 10vh);
+      }
+
+      .logo {
+        max-height: 15vh;
+      }
+    }
+
+    /* Verhindert das Markieren von Text */
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+    .fullscreen-button {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      cursor: pointer;
+      z-index: 1000;
+      transition: all 0.3s;
+      color: var(--text);
+      opacity: 0.6;
+      backdrop-filter: blur(10px);
+    }
+
+    .fullscreen-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    .fullscreen-button:active {
+      transform: scale(0.95);
+    }
+
+    .fullscreen-button svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+
+    .feierabend-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .feierabend-title {
+      font-size: min(5rem, 15vw);
+      font-weight: 700;
+      margin-bottom: 2vh;
+    }
+
+    .feierabend-message {
+      font-size: min(3rem, 10vw);
+      opacity: 0.8;
+    }
+
+    .admin-message {
+      display: none;
+      width: 90%;
+      background: rgba(0, 0, 0, 0.8);
+      border: 3px solid white;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      margin-top: 2vh;
+      font-size: min(3rem, 8vw);
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.3;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .admin-message.show {
+      display: block;
+    }
+
+    /* Optimierung für Tablets */
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .band-name {
+        font-size: min(4rem, 10vw);
+      }
+
+      .time {
+        font-size: min(14rem, 30vw);
+      }
+
+      .progress-container {
+        width: 85%;
+      }
+    }
+
+    /* Burger Menu - Timetable specific positioning */
+    .burger-menu {
+      position: fixed;
+      top: 2rem;
+      right: 1.5rem;
+      z-index: 999999;
+    }
+
+    .burger-menu.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="timetable-container">
+    <!-- Top Header Bar with Logo and Menu -->
+    <div class="top-header-bar">
+      {% if logo %}
+        <img src="/uploads/{{ logo }}" class="header-logo">
+      {% else %}
+        <div></div>
+      {% endif %}
+
+      <!-- Burger Menu -->
+      <div class="burger-menu" id="burgerMenu">
+        <button class="burger-button" id="burgerButton">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <div class="burger-dropdown" id="burgerDropdown">
+          <a href="/stage">Stage</a>
+          <a href="/backstage">Backstage</a>
+          <a href="/timetable" class="active">Timetable</a>
+          <a href="/admin">Admin</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day Navigation -->
+    <div class="day-navigation" id="dayNavigation">
+      <!-- Buttons werden per JavaScript eingefügt -->
+    </div>
+
+    <!-- Schedule List -->
+    <div class="schedule-list" id="scheduleList">
+      <!-- Bands werden per JavaScript eingefügt -->
+    </div>
+  </div>
+
+  <button class="fullscreen-button" id="fullscreenButton" title="Vollbild umschalten">
+    <!-- Icon für Vollbild aktivieren -->
+    <svg id="fullscreenEnter" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2m8-20h2a2 2 0 012 2v2m0 12v2a2 2 0 01-2 2h-2"/>
+    </svg>
+    <!-- Icon für Vollbild verlassen -->
+    <svg id="fullscreenExit" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+
+  <script>
+    // Warte bis Socket.IO geladen ist
+    window.addEventListener('load', function() {
+      if (typeof io === 'undefined') {
+        console.error('Socket.IO nicht geladen!');
+        document.getElementById('bandName').textContent = 'Verbindungsfehler';
+        document.getElementById('time').textContent = '--:--';
+        return;
+      }
+
+      const socket = io();
+      const timetableContainer = document.querySelector('.timetable-container');
+      const headerBandName = document.getElementById('headerBandName');
+      const headerTime = document.getElementById('headerTime');
+      const headerProgress = document.getElementById('headerProgress');
+      const dayNavigation = document.getElementById('dayNavigation');
+      const scheduleList = document.getElementById('scheduleList');
+
+      let fullSchedule = [];
+      let allDates = [];
+      let currentEventDate = '';
+      let selectedDate = '';
+      let currentBandData = null;
+
+      // Load complete schedule from API
+      async function loadSchedule() {
+        try {
+          const response = await fetch('/api/schedule');
+          const data = await response.json();
+
+          fullSchedule = data.schedule;
+          allDates = data.all_dates;
+          currentEventDate = data.event_date;
+          selectedDate = currentEventDate;
+
+          console.log('Schedule loaded:', fullSchedule.length, 'bands');
+          console.log('Event date:', currentEventDate);
+          console.log('All dates:', allDates);
+
+          renderDayButtons();
+          renderScheduleList(selectedDate);
+        } catch (error) {
+          console.error('Error loading schedule:', error);
+        }
+      }
+
+      // Render day navigation buttons
+      function renderDayButtons() {
+        dayNavigation.innerHTML = '';
+
+        allDates.forEach(date => {
+          const button = document.createElement('button');
+          button.className = 'day-button';
+          button.textContent = formatDate(date);
+
+          if (date === selectedDate) {
+            button.classList.add('active');
+          }
+
+          button.addEventListener('click', () => {
+            selectedDate = date;
+            renderDayButtons();
+            renderScheduleList(date);
+          });
+
+          dayNavigation.appendChild(button);
+        });
+      }
+
+      // Format date for display
+      function formatDate(dateStr) {
+        const date = new Date(dateStr + 'T12:00:00');
+        const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+        const dayName = days[date.getDay()];
+        const day = date.getDate();
+        const month = date.getMonth() + 1;
+        return `${dayName} ${day}.${month}.`;
+      }
+
+      // Render schedule list for a specific date
+      function renderScheduleList(date) {
+        const now = new Date();
+        const bandsForDay = fullSchedule.filter(band => band.date === date);
+
+        scheduleList.innerHTML = '';
+
+        if (bandsForDay.length === 0) {
+          scheduleList.innerHTML = '<div style="text-align: center; padding: 2rem; opacity: 0.5;">Keine Bands für diesen Tag</div>';
+          return;
+        }
+
+        bandsForDay.forEach(band => {
+          const startTime = new Date(`${band.date}T${band.start}`);
+          const endTime = new Date(startTime.getTime() + band.duration * 60000);
+          const bandEndTime = endTime.getTime();
+          const nowTime = now.getTime();
+
+          // Skip if band has finished playing
+          if (bandEndTime < nowTime && date === currentEventDate) {
+            return;
+          }
+
+          const item = document.createElement('div');
+          item.className = 'schedule-item';
+
+          // Check if this is the currently playing band
+          const isPlaying = currentBandData && currentBandData.status === 'playing' && currentBandData.band === band.band && date === currentEventDate;
+          if (isPlaying) {
+            item.classList.add('current');
+          }
+
+          // Create header with time info
+          const headerDiv = document.createElement('div');
+          headerDiv.className = 'schedule-item-header';
+
+          const timeDiv = document.createElement('div');
+          timeDiv.className = 'schedule-item-time';
+          timeDiv.textContent = `${band.start} - ${formatTime(endTime)} Uhr`;
+
+          headerDiv.appendChild(timeDiv);
+
+          // If playing, add timer
+          if (isPlaying) {
+            const timerDiv = document.createElement('div');
+            timerDiv.className = 'schedule-item-timer';
+            timerDiv.id = 'currentTimer';
+            const minutes = Math.floor(currentBandData.remaining / 60);
+            const seconds = Math.floor(currentBandData.remaining % 60);
+            timerDiv.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            headerDiv.appendChild(timerDiv);
+          }
+
+          const bandDiv = document.createElement('div');
+          bandDiv.className = 'schedule-item-band';
+          bandDiv.textContent = band.band;
+
+          item.appendChild(headerDiv);
+          item.appendChild(bandDiv);
+
+          // If playing, add progress bar
+          if (isPlaying) {
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'schedule-item-progress';
+            const progressBar = document.createElement('div');
+            progressBar.className = 'schedule-item-progress-bar';
+            progressBar.id = 'currentProgressBar';
+
+            const totalDuration = currentBandData.total_duration || 1;
+            const progress = (currentBandData.remaining / totalDuration) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            if (currentBandData.remaining <= currentBandData.warn_red * 60) {
+              progressBar.classList.add('warning-red');
+            } else if (currentBandData.remaining <= currentBandData.warn_orange * 60) {
+              progressBar.classList.add('warning-orange');
+            }
+
+            progressContainer.appendChild(progressBar);
+            item.appendChild(progressContainer);
+          }
+
+          scheduleList.appendChild(item);
+        });
+      }
+
+      // Format time to HH:MM
+      function formatTime(date) {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+      }
+
+      // Update current band in list
+      function updateCurrentBandInList(data) {
+        currentBandData = data;
+
+        // Re-render list to update current band with timer and progress
+        if (selectedDate === currentEventDate) {
+          renderScheduleList(selectedDate);
+        }
+
+        // If band is playing, update timer in real-time
+        if (data.status === 'playing') {
+          const timerElement = document.getElementById('currentTimer');
+          const progressElement = document.getElementById('currentProgressBar');
+
+          if (timerElement) {
+            const minutes = Math.floor(data.remaining / 60);
+            const seconds = Math.floor(data.remaining % 60);
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          }
+
+          if (progressElement) {
+            const totalDuration = data.total_duration || 1;
+            const progress = (data.remaining / totalDuration) * 100;
+            progressElement.style.width = `${progress}%`;
+
+            progressElement.classList.remove('warning-orange', 'warning-red');
+            if (data.remaining <= data.warn_red * 60) {
+              progressElement.classList.add('warning-red');
+            } else if (data.remaining <= data.warn_orange * 60) {
+              progressElement.classList.add('warning-orange');
+            }
+          }
+        }
+      }
+
+      function updateDisplay(data) {
+        updateCurrentBandInList(data);
+      }
+
+      // Socket.IO Event Handler
+      socket.on('connect', () => {
+        console.log('Verbindung hergestellt');
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Verbindung verloren');
+      });
+
+      socket.on('time_update', updateDisplay);
+      socket.on('band_update', updateDisplay);
+      socket.on('next_band', updateDisplay);
+
+      // Load schedule and initial status
+      loadSchedule();
+
+      fetch('/status')
+        .then(response => response.json())
+        .then(updateDisplay)
+        .catch(error => {
+          console.error('Fehler beim Laden:', error);
+        });
+
+      // Globale Variable für den Wake Lock
+      let wakeLock = null;
+      let noSleepVideo = null;
+
+      // Funktion zum Aktivieren des Wake Locks
+      async function keepAwake() {
+        try {
+          // Bestehenden Wake Lock freigeben
+          if (wakeLock) {
+            await wakeLock.release();
+            wakeLock = null;
+          }
+
+          // Versuche zuerst die Wake Lock API
+          if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock API aktiviert');
+            return;
+          }
+
+          // Fallback für iOS: Video-Methode
+          if (!noSleepVideo) {
+            noSleepVideo = document.createElement('video');
+            noSleepVideo.setAttribute('playsinline', '');
+            noSleepVideo.setAttribute('src', 'data:video/mp4;base64,AAAAIGZ0eXBtcDQyAAAAAG1wNDJtcDQxaXNvbWF2YzEAAATKbW9vdgAAAGxtdmhkAAAAANLEP5XSxD+VAAB1MAAAdU4AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAB1dHJhawAAAFx0a2hkAAAAD9LEP5XSxD+VAAAAAQAAAAAAAHUwAAAAAAAAAAAAAAAAAQAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAABUG1kaWEAAAAgbWRoZAAAAADSxD+V0sQ/lQAAVcQAAK7hVxAAAAAAADZoZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAARxtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADcc3RibAAAAJhzdHNkAAAAAAAAAAEAAACIYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAIVdHJhawAAAFx0a2hkAAAAD9LEP5XSxD+VAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB1ZHRhAAAAI21ldGEAAAAAAAAAImhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNTguNDUuMTAw');
+            noSleepVideo.loop = true;
+            document.body.appendChild(noSleepVideo);
+          }
+
+          // Video abspielen
+          try {
+            await noSleepVideo.play();
+            console.log('Video Wake Lock aktiviert');
+          } catch (err) {
+            console.error('Video Wake Lock Fehler:', err);
+          }
+
+        } catch (err) {
+          console.error('Wake Lock Fehler:', err);
+        }
+      }
+
+      // Aktiviere Wake Lock bei verschiedenen Ereignissen
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          keepAwake();
+        }
+      });
+
+      // Aktiviere Wake Lock beim Laden
+      window.addEventListener('load', keepAwake);
+
+      // Aktiviere Wake Lock nach dem Aufwachen
+      window.addEventListener('resume', keepAwake);
+
+      // Aktiviere Wake Lock nach der Wiederherstellung der Netzwerkverbindung
+      window.addEventListener('online', keepAwake);
+
+      // Regelmäßige Erneuerung des Wake Locks
+      setInterval(keepAwake, 30000);
+
+      // Vollbildmodus Funktion
+      const fullscreenButton = document.getElementById('fullscreenButton');
+      const fullscreenEnterIcon = document.getElementById('fullscreenEnter');
+      const fullscreenExitIcon = document.getElementById('fullscreenExit');
+
+      // Funktion zum Aktualisieren des Button-Icons
+      function updateFullscreenIcon() {
+        const isFullscreen = document.fullscreenElement ||
+                            document.webkitFullscreenElement ||
+                            document.mozFullScreenElement;
+
+        if (isFullscreen) {
+          fullscreenEnterIcon.style.display = 'none';
+          fullscreenExitIcon.style.display = 'block';
+          console.log('Vollbildmodus: AN');
+        } else {
+          fullscreenEnterIcon.style.display = 'block';
+          fullscreenExitIcon.style.display = 'none';
+          console.log('Vollbildmodus: AUS');
+        }
+      }
+
+      // Prüfe ob iOS/iPad
+      function isIOSDevice() {
+        const ua = navigator.userAgent;
+        const isIOS = /iPad|iPhone|iPod/.test(ua);
+        const isMacTouch = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        console.log('iOS Detection:', { ua, isIOS, isMacTouch, platform: navigator.platform, touchPoints: navigator.maxTouchPoints });
+        return isIOS || isMacTouch;
+      }
+
+      async function toggleFullscreen() {
+        console.log('Fullscreen Toggle geklickt');
+
+        // iOS benötigt spezielle Kiosk Browser App
+        try {
+          const isIOS = isIOSDevice();
+          console.log('Ist iOS Gerät:', isIOS);
+
+          if (isIOS) {
+            const message = 'Für Vollbild auf iOS/iPad bitte die App "SafeKiosk Browser" verwenden:\n\n' +
+                          'App Store: https://apps.apple.com/de/app/safekiosk-browser/id6743794499\n\n' +
+                          'Dann diese Seite im SafeKiosk Browser öffnen.';
+
+            if (confirm(message + '\n\nJetzt App Store öffnen?')) {
+              window.location.href = 'https://apps.apple.com/de/app/safekiosk-browser/id6743794499';
+            }
+            return;
+          }
+        } catch (error) {
+          console.error('Fehler bei iOS-Erkennung:', error);
+        }
+
+        try {
+          const isFullscreen = document.fullscreenElement ||
+                              document.webkitFullscreenElement ||
+                              document.mozFullScreenElement;
+
+          if (isFullscreen) {
+            // Bereits im Vollbildmodus - verlassen
+            console.log('Verlasse Vollbildmodus...');
+            if (document.exitFullscreen) {
+              await document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+              await document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+              await document.mozCancelFullScreen();
+            }
+          } else {
+            // Nicht im Vollbildmodus - aktivieren
+            console.log('Aktiviere Vollbildmodus...');
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+              await elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+              await elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+              await elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+              await elem.msRequestFullscreen();
+            } else {
+              console.error('Fullscreen API nicht unterstützt');
+              alert('Vollbildmodus wird von diesem Browser nicht unterstützt');
+            }
+          }
+          keepAwake(); // Wake Lock nach Vollbild-Änderung erneuern
+        } catch (err) {
+          console.error('Vollbildmodus Fehler:', err);
+          alert('Fehler beim Umschalten des Vollbildmodus: ' + err.message);
+        }
+      }
+
+      // Event Listener für den Button
+      if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Button wurde geklickt');
+          toggleFullscreen();
+        });
+      }
+
+      // Event Listener für Fullscreen-Änderungen
+      document.addEventListener('fullscreenchange', updateFullscreenIcon);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+      document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
+      document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
+
+      // Initiales Icon setzen
+      updateFullscreenIcon();
+
+      // Entferne den alten Click-Event für Vollbild
+      document.removeEventListener('click', toggleFullscreen);
+
+      // Burger Menu Funktionalität
+      const burgerButton = document.getElementById('burgerButton');
+      const burgerDropdown = document.getElementById('burgerDropdown');
+      const burgerMenu = document.getElementById('burgerMenu');
+
+      // Toggle Dropdown
+      burgerButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        burgerDropdown.classList.toggle('show');
+      });
+
+      // Schließe Dropdown beim Klick außerhalb
+      document.addEventListener('click', (e) => {
+        if (!burgerDropdown.contains(e.target) && e.target !== burgerButton) {
+          burgerDropdown.classList.remove('show');
+        }
+      });
+
+      // Verstecke Burger Menu im Vollbild
+      function updateBurgerMenuVisibility() {
+        const isFullscreen = document.fullscreenElement ||
+                            document.webkitFullscreenElement ||
+                            document.mozFullScreenElement;
+
+        if (isFullscreen) {
+          burgerMenu.classList.add('hidden');
+        } else {
+          burgerMenu.classList.remove('hidden');
+        }
+      }
+
+      // Event Listener für Fullscreen-Änderungen (auch für Burger Menu)
+      document.addEventListener('fullscreenchange', () => {
+        updateFullscreenIcon();
+        updateBurgerMenuVisibility();
+      });
+      document.addEventListener('webkitfullscreenchange', () => {
+        updateFullscreenIcon();
+        updateBurgerMenuVisibility();
+      });
+      document.addEventListener('mozfullscreenchange', () => {
+        updateFullscreenIcon();
+        updateBurgerMenuVisibility();
+      });
+      document.addEventListener('MSFullscreenChange', () => {
+        updateFullscreenIcon();
+        updateBurgerMenuVisibility();
+      });
+    });
+
+    // Hilfsfunktion zum Erstellen des Feierabend-Containers
+    function createFeierabendContainer() {
+      const container = document.createElement('div');
+      container.className = 'feierabend-container';
+      
+      const title = document.createElement('div');
+      title.className = 'feierabend-title';
+      title.textContent = 'Feierabend';
+      
+      const message = document.createElement('div');
+      message.className = 'feierabend-message';
+      message.textContent = 'Danke an alle Beteiligten!';
+      
+      container.appendChild(title);
+      container.appendChild(message);
+      document.body.appendChild(container);
+      
+      return container;
+    }
+  </script>
+</body>
+</html>

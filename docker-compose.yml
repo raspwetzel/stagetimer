@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  stagetimer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stagetimer
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # SQLite-Datenbank (persistent)
+      - ./stagetimer.db:/app/stagetimer.db
+      # Uploads (Band-Logos, Stage-Logo)
+      - ./static/uploads:/app/static/uploads
+      # Optionale Backup-Verzeichnisse
+      - ./backups:/app/backups
+    environment:
+      - TZ=Europe/Berlin
+      - SECRET_KEY=${SECRET_KEY:-change_me_in_production}
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
