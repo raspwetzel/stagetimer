@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.2.0] - 2026-02-03
+
+### Hinzugefuegt
+- **Passwort-Verwaltung fuer Benutzer**
+  - Benutzer koennen ihr eigenes Passwort aendern (Button im Header)
+  - Aktuelles Passwort muss zur Bestaetigung eingegeben werden
+  - Neues Passwort muss mindestens 6 Zeichen lang sein
+- **Admin Passwort-Reset**
+  - Admins koennen Passwoerter anderer Benutzer zuruecksetzen
+  - Neuer "Passwort" Button in der Benutzerverwaltung
+  - Kein aktuelles Passwort erforderlich (nur fuer Admins)
+- Neue API-Endpoints:
+  - `POST /api/user/change-password` - Eigenes Passwort aendern
+  - `POST /api/user/<username>/reset-password` - Admin Passwort-Reset
+- Neue Datenbank-Funktion `update_user_password()`
+
 ## [2.1.1] - 2026-02-03
 
 ### Behoben

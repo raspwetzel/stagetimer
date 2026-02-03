@@ -743,6 +743,7 @@
           <span class="theme-text">Theme</span>
         </button>
         <span>{{ current_user.id }}</span>
+        <button type="button" class="btn btn-secondary" onclick="openChangePasswordModal()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Passwort</button>
         <a href="/logout" class="logout-btn">Logout</a>
         <!-- Burger Menu -->
         <div class="burger-menu" id="burgerMenu">
@@ -1079,13 +1080,16 @@
                 {% endif %}
               </div>
             </div>
-            {% if user.username != current_user.id %}
-              <form method="POST" style="display: inline; margin-left: 1rem;">
-                <input type="hidden" name="action" value="delete_user">
-                <input type="hidden" name="username" value="{{ user.username }}">
-                <button type="submit" class="delete-user" title="Nutzer loeschen" onclick="return confirm('Benutzer {{ user.username }} wirklich loeschen?')">x</button>
-              </form>
-            {% endif %}
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" class="btn btn-secondary" onclick="openResetPasswordModal('{{ user.username }}')" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Passwort</button>
+              {% if user.username != current_user.id %}
+                <form method="POST" style="display: inline;">
+                  <input type="hidden" name="action" value="delete_user">
+                  <input type="hidden" name="username" value="{{ user.username }}">
+                  <button type="submit" class="delete-user" title="Nutzer loeschen" onclick="return confirm('Benutzer {{ user.username }} wirklich loeschen?')">x</button>
+                </form>
+              {% endif %}
+            </div>
           </li>
         {% endfor %}
       </ul>
@@ -1161,6 +1165,62 @@
         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: flex-end;">
           <button type="button" class="btn btn-secondary" onclick="closeRoleModal()">Abbrechen</button>
           <button type="button" class="btn btn-primary" onclick="saveRoles()">Speichern</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Eigenes Passwort aendern Modal -->
+    <div id="changePasswordModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="modal-content" style="background: var(--surface); padding: 2rem; border-radius: 0.75rem; max-width: 400px; width: 90%;">
+        <h3 style="margin-top: 0; margin-bottom: 1.5rem;">Passwort aendern</h3>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Aktuelles Passwort</label>
+            <input type="password" id="currentPassword" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Neues Passwort</label>
+            <input type="password" id="newPassword" class="form-control" required minlength="6">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Neues Passwort bestaetigen</label>
+            <input type="password" id="confirmNewPassword" class="form-control" required minlength="6">
+          </div>
+        </div>
+
+        <p id="changePasswordError" style="color: var(--danger); margin-top: 1rem; display: none;"></p>
+        <p id="changePasswordSuccess" style="color: #22c55e; margin-top: 1rem; display: none;"></p>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closeChangePasswordModal()">Abbrechen</button>
+          <button type="button" class="btn btn-primary" onclick="changePassword()">Speichern</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Passwort zuruecksetzen Modal -->
+    <div id="resetPasswordModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="modal-content" style="background: var(--surface); padding: 2rem; border-radius: 0.75rem; max-width: 400px; width: 90%;">
+        <h3 style="margin-top: 0; margin-bottom: 1.5rem;">Passwort zuruecksetzen fuer <span id="resetPasswordUsername" style="color: var(--primary);"></span></h3>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Neues Passwort</label>
+            <input type="password" id="resetNewPassword" class="form-control" required minlength="6">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Neues Passwort bestaetigen</label>
+            <input type="password" id="resetConfirmPassword" class="form-control" required minlength="6">
+          </div>
+        </div>
+
+        <p id="resetPasswordError" style="color: var(--danger); margin-top: 1rem; display: none;"></p>
+        <p id="resetPasswordSuccess" style="color: #22c55e; margin-top: 1rem; display: none;"></p>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Abbrechen</button>
+          <button type="button" class="btn btn-primary" onclick="resetPassword()">Speichern</button>
         </div>
       </div>
     </div>
@@ -1665,6 +1725,168 @@
     document.getElementById('roleModal')?.addEventListener('click', function(e) {
       if (e.target === this) {
         closeRoleModal();
+      }
+    });
+
+    // ==================== PASSWORT-VERWALTUNG ====================
+
+    // Eigenes Passwort aendern
+    function openChangePasswordModal() {
+      document.getElementById('currentPassword').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmNewPassword').value = '';
+      document.getElementById('changePasswordError').style.display = 'none';
+      document.getElementById('changePasswordSuccess').style.display = 'none';
+      document.getElementById('changePasswordModal').style.display = 'flex';
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById('changePasswordModal').style.display = 'none';
+    }
+
+    function changePassword() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmNewPassword').value;
+      const errorEl = document.getElementById('changePasswordError');
+      const successEl = document.getElementById('changePasswordSuccess');
+
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      // Validierung
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        errorEl.textContent = 'Alle Felder muessen ausgefuellt werden.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        errorEl.textContent = 'Neues Passwort muss mindestens 6 Zeichen lang sein.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        errorEl.textContent = 'Die Passwoerter stimmen nicht ueberein.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            successEl.textContent = 'Passwort erfolgreich geaendert!';
+            successEl.style.display = 'block';
+            setTimeout(() => {
+              closeChangePasswordModal();
+            }, 1500);
+          } else {
+            errorEl.textContent = data.message;
+            errorEl.style.display = 'block';
+          }
+        })
+        .catch(error => {
+          errorEl.textContent = 'Fehler: ' + error.message;
+          errorEl.style.display = 'block';
+        });
+    }
+
+    // Modal schliessen bei Klick ausserhalb
+    document.getElementById('changePasswordModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeChangePasswordModal();
+      }
+    });
+
+    // Admin: Passwort zuruecksetzen
+    let resetPasswordUsername = null;
+
+    function openResetPasswordModal(username) {
+      resetPasswordUsername = username;
+      document.getElementById('resetPasswordUsername').textContent = username;
+      document.getElementById('resetNewPassword').value = '';
+      document.getElementById('resetConfirmPassword').value = '';
+      document.getElementById('resetPasswordError').style.display = 'none';
+      document.getElementById('resetPasswordSuccess').style.display = 'none';
+      document.getElementById('resetPasswordModal').style.display = 'flex';
+    }
+
+    function closeResetPasswordModal() {
+      document.getElementById('resetPasswordModal').style.display = 'none';
+      resetPasswordUsername = null;
+    }
+
+    function resetPassword() {
+      const newPassword = document.getElementById('resetNewPassword').value;
+      const confirmPassword = document.getElementById('resetConfirmPassword').value;
+      const errorEl = document.getElementById('resetPasswordError');
+      const successEl = document.getElementById('resetPasswordSuccess');
+
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      // Validierung
+      if (!newPassword || !confirmPassword) {
+        errorEl.textContent = 'Alle Felder muessen ausgefuellt werden.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        errorEl.textContent = 'Neues Passwort muss mindestens 6 Zeichen lang sein.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        errorEl.textContent = 'Die Passwoerter stimmen nicht ueberein.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      fetch(`/api/user/${encodeURIComponent(resetPasswordUsername)}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          new_password: newPassword
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            successEl.textContent = 'Passwort erfolgreich zurueckgesetzt!';
+            successEl.style.display = 'block';
+            setTimeout(() => {
+              closeResetPasswordModal();
+            }, 1500);
+          } else {
+            errorEl.textContent = data.message;
+            errorEl.style.display = 'block';
+          }
+        })
+        .catch(error => {
+          errorEl.textContent = 'Fehler: ' + error.message;
+          errorEl.style.display = 'block';
+        });
+    }
+
+    // Modal schliessen bei Klick ausserhalb
+    document.getElementById('resetPasswordModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeResetPasswordModal();
       }
     });
 

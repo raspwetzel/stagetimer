@@ -578,7 +578,12 @@ updated_at DATETIME
 
 Die vollständige Versionshistorie mit allen Änderungen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-**Aktuelle Version:** 2.1.1
+**Aktuelle Version:** 2.2.0
+
+### Highlights v2.2.0 (2026-02-03)
+- Benutzer koennen ihr eigenes Passwort aendern
+- Admins koennen Passwoerter anderer Benutzer zuruecksetzen
+- Neue API-Endpoints fuer Passwort-Verwaltung
 
 ### Highlights v2.1.1 (2026-02-03)
 - Kritischer Bug in start_timer() behoben (NameError)
@@ -617,5 +622,5 @@ Bei Fragen oder Problemen erstelle bitte ein Issue im GitHub-Repository.
 
 **Entwickler:** Andre Wetzel
 **Projekt:** StageTimer - Webbasiertes Countdown-System fuer Live-Events
-**Version:** 2.1.1
+**Version:** 2.2.0
 **Technologie:** Flask, Socket.IO, SQLite, Docker

@@ -296,6 +296,15 @@ def delete_user(username):
         cursor.execute('DELETE FROM users WHERE username = ?', (username,))
 
 
+def update_user_password(username, new_password_hash):
+    """Aktualisiert das Passwort eines Benutzers"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET password_hash = ? WHERE username = ?',
+                      (new_password_hash, username))
+        return cursor.rowcount > 0
+
+
 def get_user_by_id(user_id):
     """Gibt einen Benutzer anhand der ID zurück"""
     with get_db() as conn:

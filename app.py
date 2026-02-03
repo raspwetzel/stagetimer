@@ -1487,6 +1487,102 @@ def get_all_roles_api():
     })
 
 
+# ==================== PASSWORT-VERWALTUNG API ====================
+
+@app.route('/api/user/change-password', methods=['POST'])
+@login_required
+def change_own_password():
+    """Ermöglicht einem eingeloggten Benutzer sein eigenes Passwort zu ändern"""
+    # Event-User dürfen kein Passwort ändern
+    if current_user.is_event_user:
+        return jsonify({
+            'success': False,
+            'message': 'Event-Benutzer können kein Passwort ändern'
+        }), 403
+
+    data = request.get_json()
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+
+    # Validierung
+    if not current_password or not new_password:
+        return jsonify({
+            'success': False,
+            'message': 'Aktuelles und neues Passwort erforderlich'
+        }), 400
+
+    if len(new_password) < 6:
+        return jsonify({
+            'success': False,
+            'message': 'Neues Passwort muss mindestens 6 Zeichen lang sein'
+        }), 400
+
+    # Aktuelles Passwort überprüfen
+    user = db.get_user(current_user.id)
+    if not user or not check_password_hash(user['password_hash'], current_password):
+        return jsonify({
+            'success': False,
+            'message': 'Aktuelles Passwort ist falsch'
+        }), 400
+
+    # Neues Passwort setzen
+    new_hash = generate_password_hash(new_password)
+    if db.update_user_password(current_user.id, new_hash):
+        logger.info(f"Benutzer '{current_user.id}' hat sein Passwort geändert")
+        return jsonify({
+            'success': True,
+            'message': 'Passwort erfolgreich geändert'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'Fehler beim Ändern des Passworts'
+        }), 500
+
+
+@app.route('/api/user/<username>/reset-password', methods=['POST'])
+@admin_required
+def reset_user_password(username):
+    """Ermöglicht einem Admin das Passwort eines anderen Benutzers zurückzusetzen"""
+    data = request.get_json()
+    new_password = data.get('new_password', '')
+
+    # Validierung
+    if not new_password:
+        return jsonify({
+            'success': False,
+            'message': 'Neues Passwort erforderlich'
+        }), 400
+
+    if len(new_password) < 6:
+        return jsonify({
+            'success': False,
+            'message': 'Neues Passwort muss mindestens 6 Zeichen lang sein'
+        }), 400
+
+    # Prüfen ob User existiert
+    user = db.get_user(username)
+    if not user:
+        return jsonify({
+            'success': False,
+            'message': 'Benutzer nicht gefunden'
+        }), 404
+
+    # Neues Passwort setzen
+    new_hash = generate_password_hash(new_password)
+    if db.update_user_password(username, new_hash):
+        logger.info(f"Admin '{current_user.id}' hat das Passwort von '{username}' zurückgesetzt")
+        return jsonify({
+            'success': True,
+            'message': f'Passwort für {username} wurde zurückgesetzt'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'Fehler beim Zurücksetzen des Passworts'
+        }), 500
+
+
 # ==================== EVENT-PASSWORT API ====================
 
 @app.route('/api/settings/event-password', methods=['POST'])
