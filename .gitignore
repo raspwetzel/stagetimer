@@ -37,6 +37,7 @@ instance/
 # Environment Variables
 .env
 .env.local
+.secret_key
 
 # IDE
 .vscode/

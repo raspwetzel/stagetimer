@@ -30,9 +30,33 @@ logger.setLevel(logging.ERROR)
 # Werkzeug (Flask) Logger auch auf ERROR setzen
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
+
+def get_or_create_secret_key():
+    """
+    Liest den SECRET_KEY aus .env, oder aus .secret_key Datei,
+    oder generiert einen neuen und speichert ihn persistent.
+    """
+    # 1. Prüfe .env Variable (hat Priorität)
+    env_key = os.environ.get('SECRET_KEY')
+    if env_key and env_key != 'your_secret_key_here':
+        return env_key
+
+    # 2. Prüfe ob .secret_key Datei existiert
+    secret_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.secret_key')
+    if os.path.exists(secret_file):
+        with open(secret_file, 'r') as f:
+            return f.read().strip()
+
+    # 3. Generiere neuen Key und speichere ihn
+    new_key = os.urandom(32).hex()
+    with open(secret_file, 'w') as f:
+        f.write(new_key)
+    logger.info('Neuer SECRET_KEY wurde generiert und gespeichert')
+    return new_key
+
+
 app = Flask(__name__)
-# Secret Key aus Umgebungsvariable oder generiere einen sicheren Standard
-app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24).hex())
+app.secret_key = get_or_create_secret_key()
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 socketio = SocketIO(app)
@@ -1625,8 +1649,51 @@ def get_event_password_status():
     })
 
 
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    """Ersteinrichtung - Admin-Account erstellen"""
+    # Wenn bereits User existieren, zur Login-Seite redirecten
+    if not db.needs_setup():
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        password_confirm = request.form.get('password_confirm', '')
+
+        # Validierung
+        if not username:
+            return render_template('setup.html', error='Benutzername erforderlich')
+        if len(username) < 3:
+            return render_template('setup.html', error='Benutzername muss mindestens 3 Zeichen haben')
+        if len(password) < 6:
+            return render_template('setup.html', error='Passwort muss mindestens 6 Zeichen haben')
+        if password != password_confirm:
+            return render_template('setup.html', error='Passwoerter stimmen nicht ueberein')
+
+        # Admin-User erstellen
+        password_hash = generate_password_hash(password)
+        user_id = db.add_user(username, password_hash)
+
+        # Admin-Rolle zuweisen
+        db.add_role_to_user(user_id, 'Admin')
+
+        logger.info(f"Initial admin user '{username}' created via setup page")
+
+        # Direkt einloggen und zum Admin-Panel weiterleiten
+        roles = db.get_user_roles(username)
+        login_user(User(username, roles=roles))
+        return redirect(url_for('admin'))
+
+    return render_template('setup.html')
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Wenn noch keine User existieren, zur Setup-Seite redirecten
+    if db.needs_setup():
+        return redirect(url_for('setup'))
+
     if request.method == 'POST':
         login_type = request.form.get('login_type', 'user')
 

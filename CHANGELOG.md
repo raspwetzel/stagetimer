@@ -1,6 +1,21 @@
 # Changelog
 
-Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+Alle wichtigen Aenderungen an diesem Projekt werden in dieser Datei dokumentiert.
+
+## [2.3.0] - 2026-02-03
+
+### Hinzugefuegt
+- **Web-Setup bei Erstinstallation**: Bei der ersten Installation erscheint automatisch eine Setup-Seite zum Erstellen des Admin-Accounts
+- **Automatische SECRET_KEY Generierung**: Session-Key wird automatisch generiert und persistent in `.secret_key` gespeichert
+
+### Geaendert
+- **Vereinfachte Installation**: Keine manuelle Konfiguration mehr noetig - einfach starten und loslegen
+- **Dokumentation ueberarbeitet**: README mit vereinfachter Installationsanleitung
+
+### Entfernt
+- Hardcodierte Benutzernamen (`admin`, `Andre`) aus dem Code entfernt
+- Migrations-Skripte entfernt (`migrate_to_db.py`, `hash.py`)
+- VERSION Datei entfernt (Version steht in README/CHANGELOG)
 
 ## [2.2.1] - 2026-02-03
 

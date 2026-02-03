@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ersteinrichtung - Stagetimer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/fav/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/fav/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/fav/favicon-16x16.png">
+    <link rel="manifest" href="/static/img/fav/site.webmanifest">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .setup-box {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin: 0 0 0.5rem 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            color: #93c5fd;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            background: #2d3748;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 0.75rem;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+
+        button[type="submit"]:hover {
+            background: #16a34a;
+        }
+
+        .error {
+            background: rgba(220, 38, 38, 0.1);
+            color: #ef4444;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            text-align: center;
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .password-hint {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .copyright {
+            margin-top: 2rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            padding-top: 1rem;
+            border-top: 1px solid #374151;
+        }
+
+        .copyright a {
+            color: #3b82f6;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .copyright a:hover {
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-box">
+        <div class="logo-container">
+            <h1>Stagetimer Einrichtung</h1>
+            <p class="subtitle">Willkommen! Erstelle deinen Admin-Account.</p>
+        </div>
+
+        <div class="info-box">
+            Dies ist der erste Start von Stagetimer. Bitte erstelle einen Administrator-Account, um fortzufahren.
+        </div>
+
+        <form method="POST">
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <label for="username">Benutzername</label>
+            <input type="text" id="username" name="username" placeholder="z.B. admin" required
+                   value="{{ request.form.get('username', '') }}" autocomplete="username">
+
+            <label for="password">Passwort</label>
+            <input type="password" id="password" name="password" placeholder="Mindestens 6 Zeichen" required
+                   autocomplete="new-password">
+            <p class="password-hint">Mindestens 6 Zeichen</p>
+
+            <label for="password_confirm">Passwort bestaetigen</label>
+            <input type="password" id="password_confirm" name="password_confirm" placeholder="Passwort wiederholen" required
+                   autocomplete="new-password">
+
+            <button type="submit">Admin-Account erstellen</button>
+        </form>
+
+        <div class="copyright">
+            &copy; <span id="year"></span> Andre Wetzel - <a href="https://awetzel-it.de" target="_blank">awetzel-it.de</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

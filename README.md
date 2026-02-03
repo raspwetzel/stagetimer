@@ -88,27 +88,21 @@ Eine umfassende Webanwendung zur Verwaltung und Anzeige von Band-Zeitplänen fü
    pip install -r requirements.txt
    ```
 
-4. **Umgebungsvariablen konfigurieren**
-   ```bash
-   cp .env.example .env
-   # Bearbeite .env und setze SECRET_KEY
-   ```
-
-5. **Erste Migration (falls vorhanden)**
-   ```bash
-   # Falls CSV/JSON-Dateien existieren, führe Migration aus
-   python migrate_to_db.py
-   ```
-
-6. **Anwendung starten**
+4. **Anwendung starten**
    ```bash
    python app.py
    ```
 
-7. **Browser öffnen**
-   - Display: http://localhost:5000
-   - Admin: http://localhost:5000/admin
-   - Anleitung: http://localhost:5000/guide (nach Login)
+5. **Browser oeffnen und Admin-Account erstellen**
+   - Oeffne http://localhost:5000
+   - Bei der ersten Installation erscheint automatisch die Setup-Seite
+   - Erstelle deinen Admin-Account (Benutzername + Passwort)
+   - Du wirst automatisch eingeloggt
+
+6. **Fertig!**
+   - Admin-Panel: http://localhost:5000/admin
+   - Buhnenanzeige: http://localhost:5000
+   - Anleitung: http://localhost:5000/guide
 
 ### Option 2: Docker Installation
 
@@ -118,51 +112,48 @@ Eine umfassende Webanwendung zur Verwaltung und Anzeige von Band-Zeitplänen fü
    cd stagetimer
    ```
 
-2. **Umgebungsvariablen konfigurieren**
-   ```bash
-   cp .env.example .env
-   # Bearbeite .env und setze SECRET_KEY
-   ```
-
-3. **Container starten**
+2. **Container starten**
    ```bash
    docker-compose up -d
    ```
 
-4. **Logs anzeigen**
-   ```bash
-   docker-compose logs -f
-   ```
+3. **Browser oeffnen und Admin-Account erstellen**
+   - Oeffne http://localhost:5000
+   - Bei der ersten Installation erscheint automatisch die Setup-Seite
+   - Erstelle deinen Admin-Account (Benutzername + Passwort)
 
-5. **Container stoppen**
+4. **Nuetzliche Docker-Befehle**
    ```bash
-   docker-compose down
+   docker-compose logs -f      # Logs anzeigen
+   docker-compose down         # Container stoppen
+   docker-compose restart      # Container neustarten
    ```
 
 ## Konfiguration
 
-### Umgebungsvariablen
+### Umgebungsvariablen (optional)
 
-Erstelle eine `.env` Datei basierend auf `.env.example`:
+**Die Anwendung funktioniert komplett ohne Konfiguration!** Alle Einstellungen haben sinnvolle Standardwerte.
 
+Nur wenn du etwas anpassen moechtest:
 ```bash
-# Flask Secret Key (WICHTIG: In Produktion ändern!)
-SECRET_KEY=your_secret_key_here
-
-# Flask Environment
-FLASK_ENV=production
-
-# Timezone
-TZ=Europe/Berlin
-
-# Log Level
-LOG_LEVEL=INFO
+cp .env.example .env
+# Bearbeite .env nach Bedarf
 ```
 
-**Secret Key generieren**:
-```bash
-python -c "import os; print(os.urandom(24).hex())"
-```
+**Verfuegbare Optionen:**
+
+| Variable | Standard | Beschreibung |
+|----------|----------|--------------|
+| `SECRET_KEY` | Auto-generiert | Session-Key (wird automatisch in `.secret_key` gespeichert) |
+| `FLASK_ENV` | `production` | `production` = optimiert, `development` = Debug + Auto-Reload |
+| `LOG_LEVEL` | `ERROR` | `ERROR`, `WARNING`, `INFO` oder `DEBUG` |
+| `TZ` | `Europe/Berlin` | Zeitzone fuer korrekte Zeitanzeige |
+| `PORT` | `5000` | Server-Port |
+
+**Empfehlungen:**
+- **Produktion**: Standardwerte belassen (`FLASK_ENV=production`, `LOG_LEVEL=ERROR`)
+- **Entwicklung**: `FLASK_ENV=development` und `LOG_LEVEL=DEBUG` fuer mehr Details
 
 ### Benutzer und Rollen verwalten
 
@@ -197,9 +188,6 @@ Ermoeglicht Gaesten Zugang zur Buhnenanzeige ohne eigenen Account:
 1. Im Admin-Panel unter "Veranstaltungspasswort"
 2. Passwort setzen (min. 4 Zeichen)
 3. Gaeste waehlen auf der Login-Seite den Tab "Veranstaltung"
-
-**Standard-Benutzer** (WICHTIG: Passwoerter aendern!):
-- Bestehende User `admin` und `Andre` werden automatisch zur Admin-Rolle migriert
 
 ### Zeitplan konfigurieren
 
@@ -576,42 +564,9 @@ updated_at DATETIME
 
 ## Versionshistorie
 
-Die vollständige Versionshistorie mit allen Änderungen findest du in der [CHANGELOG.md](CHANGELOG.md).
+Die vollstaendige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-**Aktuelle Version:** 2.2.1
-
-### Highlights v2.2.1 (2026-02-03)
-- Nachrichten an Bands werden jetzt auch in der Admin-Vorschau angezeigt
-
-### Highlights v2.2.0 (2026-02-03)
-- Benutzer koennen ihr eigenes Passwort aendern
-- Admins koennen Passwoerter anderer Benutzer zuruecksetzen
-- Neue API-Endpoints fuer Passwort-Verwaltung
-
-### Highlights v2.1.1 (2026-02-03)
-- Kritischer Bug in start_timer() behoben (NameError)
-- Timer-Start und Historie funktionieren jetzt zuverlaessig
-
-### Highlights v2.1.0 (2026-02-03)
-- Rollenbasiertes Berechtigungssystem (5 Rollen)
-- Veranstaltungspasswort fuer anonymen Zugang
-- Rollen-Verwaltung im Admin-Panel
-- Geschuetzte Viewer-Seiten (Login erforderlich)
-- Stagemanager-Rolle mit eingeschraenktem Admin-Zugriff
-
-### Highlights v2.0.1 (2026-02-03)
-- Favicon-Integration fuer alle Plattformen
-- Dark Mode fuer Anleitung-Seite
-- MM:SS Countdown-Format ueberall
-- Orange Next-Band Anzeige
-
-### Highlights v2.0.0 (2026-02-02)
-- SQLite-Datenbank statt CSV/JSON
-- Band-Logo-Integration
-- Historie-System
-- CSV-Verwaltung mit Import/Export
-- Docker-Support
-- Anleitung/Hilfeseite
+**Aktuelle Version:** 2.3.0
 
 ## Lizenz
 
@@ -625,5 +580,5 @@ Bei Fragen oder Problemen erstelle bitte ein Issue im GitHub-Repository.
 
 **Entwickler:** Andre Wetzel
 **Projekt:** StageTimer - Webbasiertes Countdown-System fuer Live-Events
-**Version:** 2.2.1
+**Version:** 2.3.0
 **Technologie:** Flask, Socket.IO, SQLite, Docker

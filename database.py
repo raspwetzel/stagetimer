@@ -131,9 +131,8 @@ def init_database():
 
         logger.info("Database initialized successfully")
 
-    # Initialisiere Standard-Rollen und migriere bestehende Admin-User
+    # Initialisiere Standard-Rollen
     init_roles()
-    migrate_admin_users()
 
 
 # ==================== BANDS (Schedule) ====================
@@ -268,6 +267,14 @@ def get_all_users():
         cursor = conn.cursor()
         cursor.execute('SELECT id, username FROM users ORDER BY username')
         return [dict(row) for row in cursor.fetchall()]
+
+
+def needs_setup():
+    """Prüft ob die initiale Einrichtung erforderlich ist (keine User vorhanden)"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) as count FROM users')
+        return cursor.fetchone()['count'] == 0
 
 
 def get_user(username):
@@ -520,38 +527,6 @@ def is_event_password_enabled():
     return get_event_password_hash() is not None
 
 
-# ==================== MIGRATION HELPERS (ROLES) ====================
-
-def migrate_admin_users():
-    """
-    Migriert bestehende 'admin' und 'Andre' Benutzer zur Admin-Rolle.
-    Wird bei der Initialisierung aufgerufen.
-    """
-    admin_usernames = ['admin', 'Andre']
-
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        for username in admin_usernames:
-            # Prüfe ob User existiert
-            cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
-            user = cursor.fetchone()
-
-            if user:
-                user_id = user['id']
-                # Prüfe ob bereits Rollen zugewiesen sind
-                cursor.execute('SELECT COUNT(*) as count FROM user_roles WHERE user_id = ?', (user_id,))
-                has_roles = cursor.fetchone()['count'] > 0
-
-                # Nur wenn noch keine Rollen zugewiesen sind
-                if not has_roles:
-                    cursor.execute('''
-                        INSERT OR IGNORE INTO user_roles (user_id, role_id)
-                        SELECT ?, id FROM roles WHERE name = 'Admin'
-                    ''', (user_id,))
-                    logger.info(f"Migrated user '{username}' to Admin role")
-
-
 # ==================== BAND LOGOS ====================
 
 def get_all_band_logos():
@@ -631,56 +606,3 @@ def get_all_settings():
         cursor = conn.cursor()
         cursor.execute('SELECT key, value FROM settings')
         return {row['key']: row['value'] for row in cursor.fetchall()}
-
-
-# ==================== MIGRATION HELPERS ====================
-
-def import_bands_from_list(bands_list):
-    """Importiert Bands aus einer Liste (für Migration von CSV)"""
-    delete_all_bands()
-    for band in bands_list:
-        add_band(
-            date=band['date'],
-            band_name=band['band'],
-            start_time=band['start'],
-            end_time=band['end'],
-            duration=band['duration'],
-            end_date=band.get('end_date', band['date'])
-        )
-    logger.info(f"Imported {len(bands_list)} bands from CSV")
-
-
-def import_users_from_dict(users_dict):
-    """Importiert Benutzer aus einem Dictionary oder einer Liste (für Migration von JSON)"""
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        # Unterstütze beide Formate: Liste oder Dict mit 'users' Key
-        if isinstance(users_dict, list):
-            users_list = users_dict
-        else:
-            users_list = users_dict.get('users', [])
-
-        for user in users_list:
-            # Unterstütze beide Feld-Namen: 'password' und 'password_hash'
-            password_hash = user.get('password_hash') or user.get('password')
-            cursor.execute('''
-                INSERT OR IGNORE INTO users (username, password_hash)
-                VALUES (?, ?)
-            ''', (user['username'], password_hash))
-    logger.info(f"Imported {len(users_list)} users from JSON")
-
-
-def import_band_logos_from_dict(logos_dict):
-    """Importiert Band-Logos aus einem Dictionary (für Migration von JSON)"""
-    for band_name, logo_filename in logos_dict.items():
-        set_band_logo(band_name, logo_filename)
-    logger.info(f"Imported {len(logos_dict)} band logos from JSON")
-
-
-def import_settings_from_dict(settings_dict):
-    """Importiert Einstellungen aus einem Dictionary (für Migration von JSON)"""
-    for key, value in settings_dict.items():
-        # Konvertiere Werte zu Strings für Key-Value Store
-        set_setting(key, str(value))
-    logger.info(f"Imported {len(settings_dict)} settings")
