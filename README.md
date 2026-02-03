@@ -539,7 +539,7 @@ Die vollständige Versionshistorie mit allen Änderungen findest du in der [CHAN
 
 ## Lizenz
 
-[Deine Lizenz hier einfügen]
+Keine Lizenz, nur Privat nutzbar
 
 ## Support
 
