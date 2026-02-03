@@ -42,9 +42,45 @@
         h1 {
             color: white;
             text-align: center;
-            margin: 0 0 2rem 0;
+            margin: 0 0 1.5rem 0;
             font-size: 1.5rem;
             font-weight: 500;
+        }
+
+        /* Tab Navigation */
+        .login-tabs {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #374151;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 0.75rem;
+            background: transparent;
+            color: #94a3b8;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-button:hover {
+            color: #e2e8f0;
+        }
+
+        .tab-button.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .login-form {
+            display: none;
+        }
+
+        .login-form.active {
+            display: block;
         }
 
         input {
@@ -64,7 +100,7 @@
             border-color: #3b82f6;
         }
 
-        button {
+        button[type="submit"] {
             width: 100%;
             padding: 0.75rem;
             background: #3b82f6;
@@ -76,34 +112,8 @@
             transition: background-color 0.2s;
         }
 
-        button:hover {
+        button[type="submit"]:hover {
             background: #2563eb;
-        }
-
-        .stage-link {
-            display: inline-block;
-            padding: 0.5rem 1.5rem;
-            margin-top: 1rem;
-            background: transparent;
-            color: #64748b;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            text-decoration: none;
-        }
-
-        .stage-link:hover {
-            background: rgba(100, 116, 139, 0.1);
-            border-color: #64748b;
-            color: #94a3b8;
-        }
-
-        .stage-link-container {
-            text-align: center;
-            margin-top: 1rem;
         }
 
         .error {
@@ -114,6 +124,13 @@
             margin-bottom: 1rem;
             text-align: center;
             border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .hint {
+            color: #64748b;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 0.5rem;
         }
 
         .copyright {
@@ -144,25 +161,69 @@
             {% endif %}
             <h1>Stagetimer Login</h1>
         </div>
-        {% if error %}
-            <div class="error">
-                Benutzername oder Passwort falsch
-            </div>
-        {% endif %}
-        <form method="POST">
+
+        <!-- Tab Navigation -->
+        <div class="login-tabs">
+            <button type="button" class="tab-button active" data-tab="user">Benutzer-Login</button>
+            {% if event_password_enabled %}
+            <button type="button" class="tab-button" data-tab="event">Veranstaltung</button>
+            {% endif %}
+        </div>
+
+        <!-- Benutzer-Login Form -->
+        <form method="POST" id="userForm" class="login-form active">
+            <input type="hidden" name="login_type" value="user">
+            {% if error_user %}
+                <div class="error">
+                    {% if error_message %}
+                        {{ error_message }}
+                    {% else %}
+                        Benutzername oder Passwort falsch
+                    {% endif %}
+                </div>
+            {% endif %}
             <input type="text" name="username" placeholder="Benutzername" required>
             <input type="password" name="password" placeholder="Passwort" required>
             <button type="submit">Einloggen</button>
         </form>
-        <div class="stage-link-container">
-            <a href="/stage" class="stage-link">Back to Stage</a>
-        </div>
+
+        <!-- Veranstaltungspasswort Form -->
+        {% if event_password_enabled %}
+        <form method="POST" id="eventForm" class="login-form">
+            <input type="hidden" name="login_type" value="event">
+            {% if error_event %}
+                <div class="error">Veranstaltungspasswort falsch</div>
+            {% endif %}
+            <input type="password" name="event_password" placeholder="Veranstaltungspasswort" required>
+            <button type="submit">Zur Buhnenanzeige</button>
+            <p class="hint">Mit dem Veranstaltungspasswort erhalten Sie Zugang zur Buhnenanzeige.</p>
+        </form>
+        {% endif %}
+
         <div class="copyright">
-            &copy; <span id="year"></span> André Wetzel - <a href="https://awetzel-it.de" target="_blank">awetzel-it.de</a>
+            &copy; <span id="year"></span> Andre Wetzel - <a href="https://awetzel-it.de" target="_blank">awetzel-it.de</a>
         </div>
     </div>
     <script>
         document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Tab Switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active from all tabs
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+
+                // Add active to clicked tab
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab + 'Form').classList.add('active');
+            });
+        });
+
+        // Auto-switch to event tab if event error
+        {% if error_event %}
+        document.querySelector('[data-tab="event"]')?.click();
+        {% endif %}
     </script>
 </body>
 </html>

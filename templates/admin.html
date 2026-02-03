@@ -924,13 +924,16 @@
         </table>
 
         <div class="button-group">
-          <button type="submit" onclick="submitForm('save')" class="btn btn-primary">Änderungen speichern</button>
-          <button type="submit" onclick="submitForm('delete')" class="btn btn-danger" id="deleteButton" disabled>Ausgewählte löschen</button>
+          <button type="submit" onclick="submitForm('save')" class="btn btn-primary">Aenderungen speichern</button>
+          <button type="submit" onclick="submitForm('delete')" class="btn btn-danger" id="deleteButton" disabled>Ausgewaehlte loeschen</button>
+          {% if is_full_admin %}
           <button type="submit" onclick="submitForm('reload')" class="btn btn-secondary">CSV neu laden</button>
+          {% endif %}
         </div>
       </form>
     </div>
 
+    {% if is_full_admin %}
     <div class="section">
       <h2>CSV Verwaltung</h2>
       <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
@@ -978,6 +981,7 @@
       <!-- Upload Status/Meldung -->
       <div id="uploadStatus" style="display: none; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;"></div>
     </div>
+    {% endif %}
 
     <!-- Historie -->
     <div class="section">
@@ -995,6 +999,7 @@
       </div>
     </div>
 
+    {% if is_full_admin %}
     <div class="section">
       <h2>Logo Einstellungen</h2>
       <form method="POST" enctype="multipart/form-data">
@@ -1007,10 +1012,10 @@
       <form method="POST" style="margin-top: 1rem;">
         <input type="hidden" name="action" value="set_logo_size">
         <div class="form-group">
-          <label>Logo-Größe (% der Bildschirmbreite)</label>
+          <label>Logo-Groesse (% der Bildschirmbreite)</label>
           <input type="number" name="logo_size_percent" min="1" max="100" value="{{ logo_size_percent }}" class="form-control" required>
         </div>
-        <button class="btn btn-primary" type="submit">Größe speichern</button>
+        <button class="btn btn-primary" type="submit">Groesse speichern</button>
       </form>
 
       <div class="logo-container">
@@ -1035,8 +1040,9 @@
         <button class="btn btn-primary" type="submit" style="margin-top: 1rem;">Warnzeiten speichern</button>
       </form>
     </div>
+    {% endif %}
 
-    {% if current_user.id in ['admin', 'Andre'] %}
+    {% if is_full_admin %}
     <div class="section">
       <h2>Benutzerverwaltung</h2>
       <form method="POST">
@@ -1045,11 +1051,11 @@
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div>
               <label>Benutzername</label>
-              <input type="text" name="new_username" class="form-control" required>
+              <input type="text" name="new_username" class="form-control" required minlength="3">
             </div>
             <div>
               <label>Passwort</label>
-              <input type="password" name="new_password" class="form-control" required>
+              <input type="password" name="new_password" class="form-control" required minlength="6">
             </div>
           </div>
         </div>
@@ -1057,22 +1063,107 @@
       </form>
 
       <h3 style="margin-top: 1.5rem;">Vorhandene Benutzer</h3>
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+        Klicke auf einen Benutzernamen, um die Rollen zu bearbeiten.
+      </p>
       <ul class="user-list">
         {% for user in users %}
-          <li>
-            <span>{{ user.username }}</span>
-            {% if user.username not in ['admin', 'Andre'] %}
-              <form method="POST" style="display: inline;">
+          <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: var(--surface); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="flex: 1; cursor: pointer;" onclick="openRoleModal('{{ user.username }}')">
+              <span style="font-weight: 500;">{{ user.username }}</span>
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                {% if user.roles %}
+                  {{ user.roles | join(', ') }}
+                {% else %}
+                  <span style="color: var(--danger);">Keine Rollen</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if user.username != current_user.id %}
+              <form method="POST" style="display: inline; margin-left: 1rem;">
                 <input type="hidden" name="action" value="delete_user">
                 <input type="hidden" name="username" value="{{ user.username }}">
-                <button type="submit" class="delete-user" title="Nutzer löschen">×</button>
+                <button type="submit" class="delete-user" title="Nutzer loeschen" onclick="return confirm('Benutzer {{ user.username }} wirklich loeschen?')">x</button>
               </form>
             {% endif %}
           </li>
         {% endfor %}
       </ul>
     </div>
+
+    <!-- Veranstaltungspasswort -->
+    <div class="section">
+      <h2>Veranstaltungspasswort</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        Das Veranstaltungspasswort ermoglicht Gasten Zugang zur Buhnenanzeige ohne eigenen Benutzeraccount.
+      </p>
+
+      <div id="eventPasswordStatus" style="padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; {% if event_password_enabled %}background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);{% else %}background: rgba(100, 116, 139, 0.1); border: 1px solid rgba(100, 116, 139, 0.3);{% endif %}">
+        <span style="{% if event_password_enabled %}color: #22c55e;{% else %}color: var(--text-secondary);{% endif %}">
+          Status: {% if event_password_enabled %}Aktiv{% else %}Nicht gesetzt{% endif %}
+        </span>
+      </div>
+
+      <form id="eventPasswordForm" onsubmit="saveEventPassword(event)">
+        <div class="form-group">
+          <label>Neues Veranstaltungspasswort</label>
+          <input type="password" id="eventPasswordInput" class="form-control" placeholder="Leer lassen zum Deaktivieren" minlength="4">
+        </div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary">Passwort setzen</button>
+          {% if event_password_enabled %}
+          <button type="button" class="btn btn-danger" onclick="clearEventPassword()">Deaktivieren</button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
     {% endif %}
+
+    <!-- Rollen-Modal -->
+    <div id="roleModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="modal-content" style="background: var(--surface); padding: 2rem; border-radius: 0.75rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <h3 style="margin-top: 0; margin-bottom: 1.5rem;">Rollen fur <span id="roleModalUsername" style="color: var(--primary);"></span></h3>
+
+        <div id="roleCheckboxes" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Viewer Rollen -->
+          <div style="border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 0.5rem;">
+            <p style="font-weight: 500; margin-bottom: 0.75rem; color: var(--text-secondary);">Viewer-Rollen (kombinierbar)</p>
+            <label class="role-checkbox" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 0.25rem;">
+              <input type="checkbox" name="role" value="ViewerStage">
+              <span><strong>ViewerStage</strong> - Nur Buhnenanzeige</span>
+            </label>
+            <label class="role-checkbox" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 0.25rem;">
+              <input type="checkbox" name="role" value="ViewerBackstage">
+              <span><strong>ViewerBackstage</strong> - Nur Backstage-Anzeige</span>
+            </label>
+            <label class="role-checkbox" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 0.25rem;">
+              <input type="checkbox" name="role" value="ViewerTimetable">
+              <span><strong>ViewerTimetable</strong> - Nur Zeitplan-Anzeige</span>
+            </label>
+          </div>
+
+          <!-- Exklusive Rollen -->
+          <div>
+            <p style="font-weight: 500; margin-bottom: 0.75rem; color: var(--text-secondary);">Exklusive Rollen (nicht kombinierbar)</p>
+            <label class="role-checkbox" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 0.25rem;">
+              <input type="checkbox" name="role" value="Stagemanager">
+              <span><strong>Stagemanager</strong> - Eingeschrankter Admin-Zugriff</span>
+            </label>
+            <label class="role-checkbox" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 0.25rem;">
+              <input type="checkbox" name="role" value="Admin">
+              <span><strong>Admin</strong> - Vollzugriff auf alle Funktionen</span>
+            </label>
+          </div>
+        </div>
+
+        <p id="roleError" style="color: var(--danger); margin-top: 1rem; display: none;"></p>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closeRoleModal()">Abbrechen</button>
+          <button type="button" class="btn btn-primary" onclick="saveRoles()">Speichern</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1480,6 +1571,151 @@
       // Aktualisiere Historie alle 30 Sekunden
       setInterval(loadHistory, 30000);
     });
+
+    // ==================== ROLLEN-VERWALTUNG ====================
+
+    let currentEditUsername = null;
+
+    function openRoleModal(username) {
+      currentEditUsername = username;
+      document.getElementById('roleModalUsername').textContent = username;
+      document.getElementById('roleError').style.display = 'none';
+
+      // Lade aktuelle Rollen des Users
+      fetch(`/api/user/${encodeURIComponent(username)}/roles`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Setze Checkboxen zurueck
+            document.querySelectorAll('#roleCheckboxes input[type="checkbox"]').forEach(cb => {
+              cb.checked = data.roles.includes(cb.value);
+            });
+
+            // Zeige Modal
+            document.getElementById('roleModal').style.display = 'flex';
+          } else {
+            alert('Fehler: ' + data.message);
+          }
+        })
+        .catch(error => {
+          alert('Fehler beim Laden der Rollen: ' + error.message);
+        });
+    }
+
+    function closeRoleModal() {
+      document.getElementById('roleModal').style.display = 'none';
+      currentEditUsername = null;
+    }
+
+    function saveRoles() {
+      const selectedRoles = Array.from(
+        document.querySelectorAll('#roleCheckboxes input[type="checkbox"]:checked')
+      ).map(cb => cb.value);
+
+      // Validierung
+      const viewerRoles = ['ViewerStage', 'ViewerBackstage', 'ViewerTimetable'];
+      const exclusiveRoles = ['Stagemanager', 'Admin'];
+
+      const hasViewer = selectedRoles.some(r => viewerRoles.includes(r));
+      const hasExclusive = selectedRoles.filter(r => exclusiveRoles.includes(r));
+
+      if (hasExclusive.length > 1) {
+        document.getElementById('roleError').textContent = 'Stagemanager und Admin koennen nicht kombiniert werden.';
+        document.getElementById('roleError').style.display = 'block';
+        return;
+      }
+
+      if (hasExclusive.length > 0 && hasViewer) {
+        document.getElementById('roleError').textContent = 'Exklusive Rollen (Stagemanager/Admin) koennen nicht mit Viewer-Rollen kombiniert werden.';
+        document.getElementById('roleError').style.display = 'block';
+        return;
+      }
+
+      if (selectedRoles.length === 0) {
+        document.getElementById('roleError').textContent = 'Mindestens eine Rolle muss ausgewaehlt werden.';
+        document.getElementById('roleError').style.display = 'block';
+        return;
+      }
+
+      // Speichern
+      fetch(`/api/user/${encodeURIComponent(currentEditUsername)}/roles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ roles: selectedRoles })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            closeRoleModal();
+            window.location.reload();
+          } else {
+            document.getElementById('roleError').textContent = data.message;
+            document.getElementById('roleError').style.display = 'block';
+          }
+        })
+        .catch(error => {
+          document.getElementById('roleError').textContent = 'Fehler: ' + error.message;
+          document.getElementById('roleError').style.display = 'block';
+        });
+    }
+
+    // Schliesse Modal bei Klick ausserhalb
+    document.getElementById('roleModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeRoleModal();
+      }
+    });
+
+    // ==================== EVENT-PASSWORT ====================
+
+    function saveEventPassword(e) {
+      e.preventDefault();
+      const password = document.getElementById('eventPasswordInput').value;
+
+      fetch('/api/settings/event-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password: password })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Fehler: ' + data.message);
+          }
+        })
+        .catch(error => {
+          alert('Fehler: ' + error.message);
+        });
+    }
+
+    function clearEventPassword() {
+      if (!confirm('Veranstaltungspasswort wirklich deaktivieren?')) return;
+
+      fetch('/api/settings/event-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password: '' })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Fehler: ' + data.message);
+          }
+        })
+        .catch(error => {
+          alert('Fehler: ' + error.message);
+        });
+    }
 
   </script>
 </body>

@@ -5,25 +5,39 @@ Eine umfassende Webanwendung zur Verwaltung und Anzeige von Band-Zeitplänen fü
 ## Features
 
 ### Core-Features
-- **Live-Timer-Display**: Öffentliche Anzeige mit Countdown und Fortschrittsbalken
+- **Live-Timer-Display**: Oeffentliche Anzeige mit Countdown und Fortschrittsbalken
 - **Admin-Dashboard**: Verwaltung des Event-Zeitplans mit Echtzeit-Vorschau
 - **Echtzeit-Synchronisation**: WebSocket-basierte Updates zwischen Admin und Display
 - **SQLite-Datenbank**: Robuste Datenhaltung mit automatischer Backup-Funktion
-- **Benutzer-Authentifizierung**: Multi-User-Zugriff mit Rollenverwaltung
+- **Rollenbasierte Zugriffskontrolle**: 5 Rollen mit feingranularen Berechtigungen
+- **Veranstaltungspasswort**: Anonymer Zugang zur Buhnenanzeige fuer Gaeste
 - **Responsive Design**: Funktioniert auf Smartphones, Tablets und Desktop-Displays
 
-### Neue Features (v2.0)
-- **Band-Logos**: Upload und Anzeige von Band-Logos auf der Bühnen-Anzeige
-  - Smart Rename: Automatische Übertragung beim Umbenennen von Bands
-  - Unterstützte Formate: PNG, JPG, GIF, SVG, WEBP
+### Neue Features (v2.1)
+- **Rollenbasiertes Berechtigungssystem** mit 5 Rollen:
+  - `ViewerStage` - Nur Buhnenanzeige
+  - `ViewerBackstage` - Nur Backstage-Anzeige
+  - `ViewerTimetable` - Nur Zeitplan-Anzeige
+  - `Stagemanager` - Eingeschraenkter Admin + alle Viewer-Rechte
+  - `Admin` - Vollzugriff auf alle Funktionen
+- **Veranstaltungspasswort**: Anonymer Zugang zur Buhnenanzeige
+  - Konfigurierbar im Admin-Panel
+  - Separater Login-Tab
+- **Rollen-Verwaltung**: Klick auf Benutzername im Admin-Panel
+- **Geschuetzte Views**: Alle Seiten erfordern Login
+
+### Features (v2.0)
+- **Band-Logos**: Upload und Anzeige von Band-Logos auf der Buhnen-Anzeige
+  - Smart Rename: Automatische Uebertragung beim Umbenennen von Bands
+  - Unterstuetzte Formate: PNG, JPG, GIF, SVG, WEBP
 - **Historie-System**: Automatische Aufzeichnung aller gespielten Sets
-  - Geplante vs. tatsächliche Zeiten
-  - Soft-Delete Funktion (Einträge bleiben in DB)
-  - Export-fähig für Auswertungen
+  - Geplante vs. tatsaechliche Zeiten
+  - Soft-Delete Funktion (Eintraege bleiben in DB)
+  - Export-faehig fuer Auswertungen
 - **CSV-Verwaltung**: Import und Export des gesamten Zeitplans
   - Beispiel-CSV-Download (mit aktuellem Datum)
   - Konflikterkennung beim Upload
-  - Bulk-Import für große Events
+  - Bulk-Import fuer grosse Events
 - **Anleitung/Hilfeseite**: Integrierte Dokumentation aller Features
 - **Datenbank-Migration**: Automatisches Migrations-Script von CSV/JSON zu SQLite
 
@@ -150,22 +164,42 @@ LOG_LEVEL=INFO
 python -c "import os; print(os.urandom(24).hex())"
 ```
 
-### Benutzer verwalten
+### Benutzer und Rollen verwalten
+
+**Rollen-Uebersicht**:
+
+| Rolle | Stage | Backstage | Timetable | Admin (eingeschraenkt) | Admin (voll) |
+|-------|:-----:|:---------:|:---------:|:---------------------:|:------------:|
+| ViewerStage | X | - | - | - | - |
+| ViewerBackstage | - | X | - | - | - |
+| ViewerTimetable | - | - | X | - | - |
+| Stagemanager | X | X | X | X | - |
+| Admin | X | X | X | X | X |
+
+- **Viewer-Rollen** koennen kombiniert werden (z.B. ViewerStage + ViewerTimetable)
+- **Stagemanager** und **Admin** sind exklusiv (keine anderen Rollen moeglich)
+
+**Stagemanager sieht im Admin-Panel**:
+- Display-Vorschau, Band-Nachricht, Zeitplan (ohne CSV-Reload), Historie, Anleitung
+
+**Admin sieht zusaetzlich**:
+- CSV-Verwaltung, Logo-Settings, Warnzeiten, Benutzerverwaltung, Veranstaltungspasswort
 
 **Neuen Benutzer erstellen**:
 
-Ab Version 2.0 werden Benutzer in der SQLite-Datenbank verwaltet. Neue Benutzer können direkt im Admin-Panel unter "Benutzerverwaltung" erstellt werden.
+1. Im Admin-Panel unter "Benutzerverwaltung"
+2. Benutzername und Passwort eingeben
+3. Auf Benutzername klicken um Rollen zuzuweisen
 
-Alternativ via Python:
-```python
-from database import add_user
-from werkzeug.security import generate_password_hash
+**Veranstaltungspasswort**:
 
-add_user('username', generate_password_hash('password'))
-```
+Ermoeglicht Gaesten Zugang zur Buhnenanzeige ohne eigenen Account:
+1. Im Admin-Panel unter "Veranstaltungspasswort"
+2. Passwort setzen (min. 4 Zeichen)
+3. Gaeste waehlen auf der Login-Seite den Tab "Veranstaltung"
 
-**Standard-Benutzer** (WICHTIG: Passwörter ändern!):
-- Username: `admin` / Password: (siehe users.json vor Migration)
+**Standard-Benutzer** (WICHTIG: Passwoerter aendern!):
+- Bestehende User `admin` und `Andre` werden automatisch zur Admin-Rolle migriert
 
 ### Zeitplan konfigurieren
 
@@ -391,16 +425,20 @@ stagetimer/
 
 ### REST Endpoints
 
-#### Öffentliche Routen
-**GET /**
+#### Viewer-Routen (Login erforderlich)
+**GET /** oder **GET /stage**
 - Stage View (Hauptanzeige)
+- Erfordert: ViewerStage, Stagemanager oder Admin
 
 **GET /backstage**
 - Backstage View (kompakte Ansicht)
+- Erfordert: ViewerBackstage, Stagemanager oder Admin
 
 **GET /timetable**
-- Timetable View (Zeitplan-Übersicht)
+- Timetable View (Zeitplan-Uebersicht)
+- Erfordert: ViewerTimetable, Stagemanager oder Admin
 
+#### Oeffentliche Routen
 **GET /status**
 - JSON-Status der aktuellen Band
 - Response: `{status: "playing|waiting|finished", ...}`
@@ -433,9 +471,15 @@ stagetimer/
 **POST /api/history/hide_all**
 - Gesamte Historie leeren
 
+**GET/POST /api/user/<username>/roles** (Admin)
+- Benutzer-Rollen abrufen/setzen
+
+**GET/POST /api/settings/event-password** (Admin)
+- Veranstaltungspasswort verwalten
+
 #### Auth-Routen
 **GET/POST /login**
-- Benutzer-Login
+- Benutzer-Login (mit Tabs fuer User und Veranstaltungspasswort)
 
 **GET /logout**
 - Benutzer-Logout
@@ -499,6 +543,22 @@ password_hash TEXT
 created_at DATETIME
 ```
 
+### roles (Rollen-Definition)
+```sql
+id INTEGER PRIMARY KEY
+name TEXT UNIQUE
+description TEXT
+created_at DATETIME
+```
+
+### user_roles (Benutzer-Rollen-Verknuepfung)
+```sql
+id INTEGER PRIMARY KEY
+user_id INTEGER (FK -> users)
+role_id INTEGER (FK -> roles)
+created_at DATETIME
+```
+
 ### band_logos (Logo-Zuordnungen)
 ```sql
 id INTEGER PRIMARY KEY
@@ -518,16 +578,20 @@ updated_at DATETIME
 
 Die vollständige Versionshistorie mit allen Änderungen findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-**Aktuelle Version:** 2.0.1
+**Aktuelle Version:** 2.1.0
+
+### Highlights v2.1.0 (2026-02-03)
+- Rollenbasiertes Berechtigungssystem (5 Rollen)
+- Veranstaltungspasswort fuer anonymen Zugang
+- Rollen-Verwaltung im Admin-Panel
+- Geschuetzte Viewer-Seiten (Login erforderlich)
+- Stagemanager-Rolle mit eingeschraenktem Admin-Zugriff
 
 ### Highlights v2.0.1 (2026-02-03)
-- Favicon-Integration für alle Plattformen
-- Dark Mode für Anleitung-Seite
-- MM:SS Countdown-Format überall
+- Favicon-Integration fuer alle Plattformen
+- Dark Mode fuer Anleitung-Seite
+- MM:SS Countdown-Format ueberall
 - Orange Next-Band Anzeige
-- Automatisches Entfernen aus Zeitplan
-- Verbesserte Historie mit Original-Zeiten
-- Design-Verbesserungen und Bug-Fixes
 
 ### Highlights v2.0.0 (2026-02-02)
 - SQLite-Datenbank statt CSV/JSON
@@ -547,7 +611,7 @@ Bei Fragen oder Problemen erstelle bitte ein Issue im GitHub-Repository.
 
 ## Credits
 
-**Entwickler:** André Wetzel
-**Projekt:** StageTimer - Webbasiertes Countdown-System für Live-Events
-**Version:** 2.0.1
+**Entwickler:** Andre Wetzel
+**Projekt:** StageTimer - Webbasiertes Countdown-System fuer Live-Events
+**Version:** 2.1.0
 **Technologie:** Flask, Socket.IO, SQLite, Docker

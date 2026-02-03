@@ -7,6 +7,7 @@ import sqlite3
 from datetime import datetime
 from contextlib import contextmanager
 import logging
+from werkzeug.security import generate_password_hash, check_password_hash
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,40 @@ def init_database():
             )
         ''')
 
+        # Tabelle: roles (Rollen-Definition)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Tabelle: user_roles (Benutzer-Rollen-Verknüpfung)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+                UNIQUE(user_id, role_id)
+            )
+        ''')
+
+        # Index für schnellere Rollen-Abfragen
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_user_roles_user_id
+            ON user_roles(user_id)
+        ''')
+
         logger.info("Database initialized successfully")
+
+    # Initialisiere Standard-Rollen und migriere bestehende Admin-User
+    init_roles()
+    migrate_admin_users()
 
 
 # ==================== BANDS (Schedule) ====================
@@ -256,10 +290,257 @@ def add_user(username, password_hash):
 
 
 def delete_user(username):
-    """Löscht einen Benutzer"""
+    """Löscht einen Benutzer (und seine Rollen durch CASCADE)"""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('DELETE FROM users WHERE username = ?', (username,))
+
+
+def get_user_by_id(user_id):
+    """Gibt einen Benutzer anhand der ID zurück"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, username, password_hash FROM users WHERE id = ?',
+                      (user_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+# ==================== ROLES ====================
+
+def init_roles():
+    """Initialisiert die Standard-Rollen (falls nicht vorhanden)"""
+    default_roles = [
+        ('ViewerStage', 'Zugriff nur auf Bühnenanzeige (index.html)'),
+        ('ViewerBackstage', 'Zugriff nur auf Backstage-Anzeige (backstage.html)'),
+        ('ViewerTimetable', 'Zugriff nur auf Zeitplan-Anzeige (timetable.html)'),
+        ('Stagemanager', 'Eingeschränkter Admin-Zugriff mit allen Viewer-Rechten'),
+        ('Admin', 'Vollzugriff auf alle Funktionen'),
+    ]
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        for name, description in default_roles:
+            cursor.execute('''
+                INSERT OR IGNORE INTO roles (name, description)
+                VALUES (?, ?)
+            ''', (name, description))
+        logger.info("Default roles initialized")
+
+
+def get_all_roles():
+    """Gibt alle verfügbaren Rollen zurück"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name, description FROM roles ORDER BY id')
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_role_by_name(name):
+    """Gibt eine Rolle anhand des Namens zurück"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name, description FROM roles WHERE name = ?', (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def get_user_roles(username):
+    """Gibt die Rollen eines Benutzers als Liste von Rollennamen zurück"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT r.name
+            FROM roles r
+            JOIN user_roles ur ON r.id = ur.role_id
+            JOIN users u ON u.id = ur.user_id
+            WHERE u.username = ?
+            ORDER BY r.id
+        ''', (username,))
+        return [row['name'] for row in cursor.fetchall()]
+
+
+def get_user_roles_by_id(user_id):
+    """Gibt die Rollen eines Benutzers anhand der User-ID zurück"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT r.name
+            FROM roles r
+            JOIN user_roles ur ON r.id = ur.role_id
+            WHERE ur.user_id = ?
+            ORDER BY r.id
+        ''', (user_id,))
+        return [row['name'] for row in cursor.fetchall()]
+
+
+def set_user_roles(user_id, role_names):
+    """Setzt die Rollen eines Benutzers (ersetzt alle bestehenden Rollen)"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Lösche alle bestehenden Rollen des Users
+        cursor.execute('DELETE FROM user_roles WHERE user_id = ?', (user_id,))
+
+        # Füge neue Rollen hinzu
+        for role_name in role_names:
+            cursor.execute('''
+                INSERT INTO user_roles (user_id, role_id)
+                SELECT ?, id FROM roles WHERE name = ?
+            ''', (user_id, role_name))
+
+        logger.info(f"Updated roles for user {user_id}: {role_names}")
+
+
+def add_role_to_user(user_id, role_name):
+    """Fügt eine Rolle zu einem Benutzer hinzu"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR IGNORE INTO user_roles (user_id, role_id)
+            SELECT ?, id FROM roles WHERE name = ?
+        ''', (user_id, role_name))
+        return cursor.rowcount > 0
+
+
+def remove_role_from_user(user_id, role_name):
+    """Entfernt eine Rolle von einem Benutzer"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            DELETE FROM user_roles
+            WHERE user_id = ? AND role_id = (SELECT id FROM roles WHERE name = ?)
+        ''', (user_id, role_name))
+        return cursor.rowcount > 0
+
+
+def user_has_role(username, role_name):
+    """Prüft ob ein Benutzer eine bestimmte Rolle hat"""
+    roles = get_user_roles(username)
+    return role_name in roles
+
+
+def user_has_any_role(username, role_names):
+    """Prüft ob ein Benutzer mindestens eine der angegebenen Rollen hat"""
+    user_roles = get_user_roles(username)
+    return any(role in user_roles for role in role_names)
+
+
+def get_users_with_roles():
+    """Gibt alle Benutzer mit ihren Rollen zurück"""
+    users = get_all_users()
+    for user in users:
+        user['roles'] = get_user_roles(user['username'])
+    return users
+
+
+def count_admins():
+    """Zählt die Anzahl der Benutzer mit Admin-Rolle"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT COUNT(DISTINCT ur.user_id) as count
+            FROM user_roles ur
+            JOIN roles r ON r.id = ur.role_id
+            WHERE r.name = 'Admin'
+        ''')
+        return cursor.fetchone()['count']
+
+
+def validate_role_combination(role_names):
+    """
+    Validiert ob eine Rollen-Kombination gültig ist.
+    Regeln:
+    - Viewer-Rollen (ViewerStage, ViewerBackstage, ViewerTimetable) können kombiniert werden
+    - Stagemanager und Admin sind exklusiv (keine anderen Rollen erlaubt)
+    """
+    viewer_roles = {'ViewerStage', 'ViewerBackstage', 'ViewerTimetable'}
+    exclusive_roles = {'Stagemanager', 'Admin'}
+
+    user_viewer_roles = set(role_names) & viewer_roles
+    user_exclusive_roles = set(role_names) & exclusive_roles
+
+    # Keine exklusiven Rollen -> nur Viewer-Rollen erlaubt
+    if not user_exclusive_roles:
+        return len(set(role_names) - viewer_roles) == 0
+
+    # Genau eine exklusive Rolle und keine anderen
+    if len(user_exclusive_roles) == 1 and len(role_names) == 1:
+        return True
+
+    # Mehr als eine exklusive Rolle oder Kombination mit anderen
+    return False
+
+
+# ==================== EVENT PASSWORD ====================
+
+def get_event_password_hash():
+    """Gibt den Hash des Veranstaltungspassworts zurück (oder None wenn nicht gesetzt)"""
+    value = get_setting('event_password_hash')
+    return value if value else None
+
+
+def set_event_password(password):
+    """Setzt das Veranstaltungspasswort (wird gehasht gespeichert)"""
+    if password:
+        password_hash = generate_password_hash(password)
+        set_setting('event_password_hash', password_hash)
+        logger.info("Event password has been set")
+    else:
+        clear_event_password()
+
+
+def clear_event_password():
+    """Löscht das Veranstaltungspasswort"""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM settings WHERE key = 'event_password_hash'")
+        logger.info("Event password has been cleared")
+
+
+def verify_event_password(password):
+    """Prüft ob das angegebene Passwort mit dem Veranstaltungspasswort übereinstimmt"""
+    stored_hash = get_event_password_hash()
+    if not stored_hash:
+        return False
+    return check_password_hash(stored_hash, password)
+
+
+def is_event_password_enabled():
+    """Prüft ob ein Veranstaltungspasswort gesetzt ist"""
+    return get_event_password_hash() is not None
+
+
+# ==================== MIGRATION HELPERS (ROLES) ====================
+
+def migrate_admin_users():
+    """
+    Migriert bestehende 'admin' und 'Andre' Benutzer zur Admin-Rolle.
+    Wird bei der Initialisierung aufgerufen.
+    """
+    admin_usernames = ['admin', 'Andre']
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        for username in admin_usernames:
+            # Prüfe ob User existiert
+            cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
+            user = cursor.fetchone()
+
+            if user:
+                user_id = user['id']
+                # Prüfe ob bereits Rollen zugewiesen sind
+                cursor.execute('SELECT COUNT(*) as count FROM user_roles WHERE user_id = ?', (user_id,))
+                has_roles = cursor.fetchone()['count'] > 0
+
+                # Nur wenn noch keine Rollen zugewiesen sind
+                if not has_roles:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO user_roles (user_id, role_id)
+                        SELECT ?, id FROM roles WHERE name = 'Admin'
+                    ''', (user_id,))
+                    logger.info(f"Migrated user '{username}' to Admin role")
 
 
 # ==================== BAND LOGOS ====================

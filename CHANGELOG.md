@@ -2,6 +2,44 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.1.0] - 2026-02-03
+
+### Hinzugefuegt
+- **Rollenbasiertes Berechtigungssystem** mit 5 Rollen:
+  - `ViewerStage` - Nur Buhnenanzeige (index.html)
+  - `ViewerBackstage` - Nur Backstage-Anzeige (backstage.html)
+  - `ViewerTimetable` - Nur Zeitplan-Anzeige (timetable.html)
+  - `Stagemanager` - Eingeschraenkter Admin-Zugriff mit allen Viewer-Rechten
+  - `Admin` - Vollzugriff auf alle Funktionen
+- **Veranstaltungspasswort** fuer anonymen Zugang zur Buhnenanzeige
+  - Einstellbar im Admin-Panel
+  - Separater Login-Tab auf der Login-Seite
+  - Gibt nur ViewerStage-Berechtigung
+- **Rollen-Verwaltung** im Admin-Panel
+  - Klick auf Benutzername oeffnet Rollen-Modal
+  - Checkboxen fuer Rollenzuweisung
+  - Validierung: Viewer-Rollen kombinierbar, Stagemanager/Admin exklusiv
+- **Geschuetzte Viewer-Seiten** - Alle Seiten erfordern jetzt Login
+- **Logout-Button** in der Navigation aller Views
+- Neue Datenbank-Tabellen: `roles`, `user_roles`
+- Neue API-Endpoints:
+  - `GET/POST /api/user/<username>/roles` - Rollenverwaltung
+  - `GET/POST /api/settings/event-password` - Veranstaltungspasswort
+
+### Geaendert
+- **Login-Seite** mit Tabs fuer Benutzer-Login und Veranstaltungspasswort
+- **Admin-Panel** zeigt Sektionen basierend auf Rolle:
+  - Stagemanager sieht: Display-Vorschau, Band-Nachricht, Zeitplan, Historie, Anleitung
+  - Admin sieht zusaetzlich: CSV-Verwaltung, Logo-Settings, Warnzeiten, Benutzerverwaltung
+- Hardcodierte Admin-Checks (`admin`/`Andre`) durch Rollensystem ersetzt
+- Navigation zeigt nur zugaengliche Seiten basierend auf Benutzerrolle
+- Bestehende User `admin` und `Andre` werden automatisch zur Admin-Rolle migriert
+
+### Behoben
+- Benutzer koennen sich nicht mehr selbst loeschen
+- Letzter Admin-Benutzer kann nicht degradiert werden
+- Eigene Admin-Rolle kann nicht entfernt werden
+
 ## [2.0.1] - 2026-02-03
 
 ### Hinzugefügt

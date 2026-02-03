@@ -391,10 +391,19 @@
       </svg>
     </button>
     <div class="burger-dropdown" id="burgerDropdown">
+      {% if current_user.can_access_stage() %}
       <a href="/stage" class="active">Stage</a>
+      {% endif %}
+      {% if current_user.can_access_backstage() %}
       <a href="/backstage">Backstage</a>
+      {% endif %}
+      {% if current_user.can_access_timetable() %}
       <a href="/timetable">Timetable</a>
+      {% endif %}
+      {% if current_user.can_access_admin() %}
       <a href="/admin">Admin</a>
+      {% endif %}
+      <a href="/logout">Logout</a>
     </div>
   </div>
 
