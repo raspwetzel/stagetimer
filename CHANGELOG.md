@@ -2,6 +2,20 @@
 
 Alle wichtigen Aenderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [2.3.1] - 2026-02-04
+
+### Geaendert
+- **Docker: Named Volumes** statt Host-Mounts fuer persistente Daten
+  - Keine Berechtigungsprobleme mehr beim Clonen von GitHub
+  - Volume `stagetimer_data` wird automatisch verwaltet
+- **Datenspeicherung zentralisiert**: Alle persistenten Daten (Datenbank, Secret Key, Uploads) liegen im `data/` Verzeichnis
+- Upload-Route erweitert fuer Unterverzeichnisse (`/uploads/<path:filename>`)
+
+### Behoben
+- **PermissionError in Docker**: Container startet jetzt zuverlaessig ohne manuelle Rechteanpassungen
+- **IsADirectoryError**: `.secret_key` wird nicht mehr als Volume gemountet
+- Band-Logo-Pfade in Templates korrigiert
+
 ## [2.3.0] - 2026-02-03
 
 ### Hinzugefuegt

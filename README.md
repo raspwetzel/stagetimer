@@ -129,6 +129,11 @@ Eine umfassende Webanwendung zur Verwaltung und Anzeige von Band-Zeitplänen fü
    docker-compose restart      # Container neustarten
    ```
 
+5. **Datenspeicherung**
+   - Alle Daten werden im Docker Volume `stagetimer_data` gespeichert
+   - Inhalt: Datenbank, Session-Key, hochgeladene Logos
+   - Volume-Inhalt anzeigen: `docker volume inspect stagetimer_data`
+
 ## Konfiguration
 
 ### Umgebungsvariablen (optional)
@@ -566,11 +571,11 @@ updated_at DATETIME
 
 Die vollstaendige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md).
 
-**Aktuelle Version:** 2.3.0
+**Aktuelle Version:** 2.3.1
 
 ## Lizenz
 
-Keine Lizenz, nur Privat nutzbar
+Dieses Projekt ist lizenziert unter der [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
 
 ## Support
 
@@ -580,5 +585,5 @@ Bei Fragen oder Problemen erstelle bitte ein Issue im GitHub-Repository.
 
 **Entwickler:** Andre Wetzel
 **Projekt:** StageTimer - Webbasiertes Countdown-System fuer Live-Events
-**Version:** 2.3.0
+**Version:** 2.3.1
 **Technologie:** Flask, Socket.IO, SQLite, Docker
