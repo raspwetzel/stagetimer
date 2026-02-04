@@ -3,6 +3,7 @@ Datenbank-Management für StageTimer
 SQLite-basierte Persistenz für Bands, Historie, Benutzer, Logos und Einstellungen
 """
 
+import os
 import sqlite3
 from datetime import datetime
 from contextlib import contextmanager
@@ -11,7 +12,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 logger = logging.getLogger(__name__)
 
-DB_FILE = 'stagetimer.db'
+# Daten-Verzeichnis (fuer Docker-Volume)
+DATA_DIR = os.environ.get('STAGETIMER_DATA_DIR', 'data')
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_FILE = os.path.join(DATA_DIR, 'stagetimer.db')
 
 
 @contextmanager

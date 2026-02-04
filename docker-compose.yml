@@ -11,10 +11,12 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      # Persistente Daten
-      - ./stagetimer.db:/app/stagetimer.db          # SQLite-Datenbank
-      - ./static/uploads:/app/static/uploads        # Uploads (Logos)
+      # Persistente Daten (benannte Volumes)
+      - stagetimer_data:/app/data
     environment:
       - TZ=Europe/Berlin
       - FLASK_ENV=production
       - LOG_LEVEL=ERROR
+
+volumes:
+  stagetimer_data:

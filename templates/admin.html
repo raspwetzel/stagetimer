@@ -947,7 +947,7 @@
               <td style="text-align: center; padding: 0.5rem;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                   {% if band.band in band_logos %}
-                    <img src="{{ url_for('static', filename='uploads/band_logos/' + band_logos[band.band]) }}"
+                    <img src="/uploads/band_logos/{{ band_logos[band.band] }}"
                          alt="{{ band.band }}"
                          style="max-height: 40px; max-width: 60px; object-fit: contain; border-radius: 4px;">
                     <button type="button" class="btn-icon" onclick="deleteBandLogo('{{ band.band }}')" title="Logo löschen">

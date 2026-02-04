@@ -31,9 +31,14 @@ logger.setLevel(logging.ERROR)
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 
+# Daten-Verzeichnis (konsistent mit database.py)
+DATA_DIR = os.environ.get('STAGETIMER_DATA_DIR', 'data')
+os.makedirs(DATA_DIR, exist_ok=True)
+
+
 def get_or_create_secret_key():
     """
-    Liest den SECRET_KEY aus .env, oder aus .secret_key Datei,
+    Liest den SECRET_KEY aus .env, oder aus Datei im Data-Verzeichnis,
     oder generiert einen neuen und speichert ihn persistent.
     """
     # 1. Prüfe .env Variable (hat Priorität)
@@ -42,8 +47,8 @@ def get_or_create_secret_key():
         return env_key
 
     # 2. Prüfe ob .secret_key Datei existiert
-    secret_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.secret_key')
-    if os.path.exists(secret_file):
+    secret_file = os.path.join(DATA_DIR, '.secret_key')
+    if os.path.exists(secret_file) and os.path.isfile(secret_file):
         with open(secret_file, 'r') as f:
             return f.read().strip()
 
@@ -57,7 +62,7 @@ def get_or_create_secret_key():
 
 app = Flask(__name__)
 app.secret_key = get_or_create_secret_key()
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 socketio = SocketIO(app)
 
@@ -1327,7 +1332,7 @@ def upload_band_logo():
         # Lösche altes Logo, falls vorhanden
         old_logo = db.get_band_logo(band_name)
         if old_logo:
-            old_logo_path = os.path.join('static/uploads/band_logos', old_logo)
+            old_logo_path = os.path.join(app.config['UPLOAD_FOLDER'], 'band_logos', old_logo)
             if os.path.exists(old_logo_path):
                 os.remove(old_logo_path)
 
@@ -1335,7 +1340,7 @@ def upload_band_logo():
         timestamp = int(time.time())
         safe_band_name = secure_filename(band_name)
         filename = f"{safe_band_name}_{timestamp}{file_ext}"
-        filepath = os.path.join('static/uploads/band_logos', filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'band_logos', filename)
 
         # Speichere Datei
         file.save(filepath)
@@ -1368,7 +1373,7 @@ def delete_band_logo():
 
     try:
         # Lösche Datei
-        filepath = os.path.join('static/uploads/band_logos', logo_filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'band_logos', logo_filename)
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -1755,8 +1760,9 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/uploads/<filename>')
+@app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
+    """Serviert Dateien aus dem Upload-Verzeichnis (inkl. Unterverzeichnisse)"""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @socketio.on('admin_message')
@@ -1774,8 +1780,8 @@ def handle_admin_message(data):
     })
 
 if __name__ == '__main__':
-    # Erstelle notwendige Verzeichnisse
-    os.makedirs('static/uploads/band_logos', exist_ok=True)
+    # Erstelle notwendige Verzeichnisse im Data-Verzeichnis
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'band_logos'), exist_ok=True)
 
     # Log startup information
     logger.info("=" * 50)

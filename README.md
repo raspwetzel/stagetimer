@@ -360,7 +360,7 @@ Logs werden auf der Konsole ausgegeben.
 **Lösung**: Prüfe das Datum in schedule.csv (muss YYYY-MM-DD sein)
 
 **Problem**: Upload-Fehler
-**Lösung**: Prüfe Berechtigungen für `static/uploads/` Verzeichnis
+**Lösung**: Prüfe Berechtigungen für `data/uploads/` Verzeichnis (Docker: Volume `stagetimer_data`)
 
 ## Entwicklung
 

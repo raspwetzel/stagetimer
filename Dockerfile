@@ -20,9 +20,6 @@ COPY database.py .
 COPY static/ static/
 COPY templates/ templates/
 
-# Erstelle Upload-Verzeichnisse
-RUN mkdir -p static/uploads/band_logos
-
 # Setze Umgebungsvariablen
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production

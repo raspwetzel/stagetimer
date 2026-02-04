@@ -514,7 +514,7 @@
         // Zeige Band-Logo, falls vorhanden
         const bandLogoImg = document.getElementById('bandLogo');
         if (data.band_logo) {
-          bandLogoImg.src = `/static/uploads/band_logos/${data.band_logo}`;
+          bandLogoImg.src = `/uploads/band_logos/${data.band_logo}`;
           bandLogoImg.style.display = 'block';
         } else {
           bandLogoImg.style.display = 'none';
